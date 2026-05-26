@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CD Wanted List</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f2efe8; --surface: #faf8f3; --surface2: #eeebe2;
+    --border: #d8d4c8; --border-light: #e8e4da;
+    --text: #1c1a15; --text-muted: #7a7668; --text-faint: #b0ada4;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+    --gold: #b8941f;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+  header { background: var(--text); color: var(--bg); padding: 14px 20px; display: flex; align-items: baseline; gap: 14px; }
+  header h1 { font-family: var(--mono); font-size: 15px; font-weight: 600; letter-spacing: 0.04em; }
+  header .sub { font-size: 11px; opacity: 0.5; font-family: var(--mono); }
+  .tabs { background: var(--surface); border-bottom: 2px solid var(--border); display: flex; padding: 0 16px; }
+  .tab { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.05em; padding: 11px 18px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; text-transform: uppercase; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+  .tab .count { display: inline-block; font-size: 10px; background: var(--surface2); border-radius: 3px; padding: 1px 5px; margin-left: 6px; color: var(--text-muted); }
+  .tab.active .count { background: var(--text); color: var(--bg); }
+  .toolbar { padding: 8px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+  .toolbar input { font-family: var(--mono); font-size: 12px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); width: 200px; }
+  .toolbar input:focus { outline: none; border-color: var(--text); }
+  .genre-btns { display: flex; gap: 5px; flex-wrap: wrap; }
+  .gbtn { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 4px 9px; border-radius: 3px; border: 1px solid var(--border); background: none; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+  .gbtn:hover { color: var(--text); background: var(--surface2); }
+  .gbtn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .badge { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-left: auto; }
+  .got-toggle { font-family: var(--mono); font-size: 11px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 4px; background: none; color: var(--text-muted); cursor: pointer; }
+  .got-toggle:hover { background: var(--surface2); color: var(--text); }
+  .got-toggle.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .score-legend { display: flex; gap: 10px; align-items: center; font-family: var(--mono); font-size: 10px; color: var(--text-muted); flex-wrap: wrap; padding: 7px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .score-legend span { display: flex; align-items: center; gap: 4px; }
+  .tab-content { max-width: 980px; margin: 0 auto; padding: 14px 16px; }
+  .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; background: var(--surface2); white-space: nowrap; }
+  tbody tr.main-row { cursor: pointer; border-bottom: 1px solid var(--border-light); }
+  tbody tr.main-row:hover td { background: var(--bg); }
+  tbody tr.main-row.got td { opacity: 0.4; }
+  tbody tr.main-row.got .cell-artist { text-decoration: line-through; text-decoration-color: var(--border); }
+  tbody tr.genre-row td { background: var(--surface2); padding: 7px 12px 3px; font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); border-top: 1px solid var(--border); border-bottom: none; }
+  tbody td { padding: 9px 12px; vertical-align: middle; font-size: 13px; }
+  tbody tr.detail-row td { padding: 0; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .detail-inner { display: none; padding: 10px 14px; font-size: 12px; line-height: 1.6; color: var(--text-muted); border-left: 3px solid var(--border); }
+  .detail-inner.open { display: block; }
+  .cell-expand { width: 20px; text-align: center; }
+  .cell-score { width: 46px; text-align: center; }
+  .cell-artist { width: 16%; font-weight: 500; }
+  .cell-album { width: 20%; font-weight: 600; }
+  .cell-label { width: 13%; font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+  .cell-cat { width: 13%; font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+  .cell-price { width: 76px; font-family: var(--mono); font-size: 11px; text-align: right; }
+  .cell-tip { font-size: 11px; color: var(--text-muted); font-style: italic; }
+  .cell-ap { width: 54px; text-align: center; }
+  .cell-got { width: 36px; text-align: center; }
+  .score { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 600; width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 4px; }
+  .score-5 { background: #eaf4ec; color: #1a5c2a; border: 1px solid #b0dbb8; }
+  .score-4 { background: #f0f7ef; color: #2d7a3a; border: 1px solid #c0ddc4; }
+  .score-3 { background: #fdf6e3; color: #8a6200; border: 1px solid #e0c87a; }
+  .score-2 { background: #fdf0e8; color: #7a4010; border: 1px solid #d4a07a; }
+  .score-1 { background: #f2f2f2; color: #5a5a5a; border: 1px solid #c8c8c8; }
+  .gold-tag { display: inline-block; font-family: var(--mono); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: linear-gradient(135deg,#f4d97a,#b8941f); color: #3a2800; margin-left: 4px; vertical-align: middle; }
+  .ap-dot { display: inline-block; font-family: var(--mono); font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--gold); color: var(--gold); cursor: pointer; white-space: nowrap; }
+  .ap-dot:hover { background: #b8941f18; }
+  .got-check { width: 16px; height: 16px; cursor: pointer; accent-color: var(--text); }
+  .chevron { transition: transform 0.15s; display: inline-block; font-size: 9px; color: var(--text-faint); }
+  .chevron.open { transform: rotate(90deg); }
+  .empty { text-align: center; padding: 40px; color: var(--text-muted); font-family: var(--mono); font-size: 12px; }
+  .box-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 12px; }
+  .box-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; cursor: pointer; position: relative; }
+  .box-card:hover { background: var(--bg); }
+  .box-card.got { opacity: 0.4; }
+  .box-artist { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+  .box-album { font-size: 14px; font-weight: 600; margin: 3px 0 6px; }
+  .box-cat { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+  .box-price { font-family: var(--mono); font-size: 12px; margin-top: 8px; }
+  .box-detail { font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; display: none; }
+  .box-card.open .box-detail { display: block; }
+  .box-got { position: absolute; top: 14px; right: 14px; }
+  @media (max-width: 700px) { .cell-cat, .cell-label { display: none; } .toolbar input { width: 140px; } }
+</style>
+</head>
+<body>
+<header><h1>CD WANTED LIST</h1><span class="sub">Amoeba hunt</span></header>
+<div class="tabs">
+  <button class="tab active" data-tab="audiophile" onclick="switchTab('audiophile')">Audiophile <span class="count" id="count-audiophile"></span></button>
+  <button class="tab" data-tab="standard" onclick="switchTab('standard')">Standard <span class="count" id="count-standard"></span></button>
+  <button class="tab" data-tab="boxsets" onclick="switchTab('boxsets')">Box Sets <span class="count" id="count-boxsets"></span></button>
+</div>
+<div id="tab-audiophile">
+  <div class="score-legend">
+    <span><span class="score score-5">5</span> Must-have, no real alternative</span>
+    <span><span class="score score-4">4</span> Strong upgrade, worth hunting</span>
+    <span><span class="score score-3">3</span> Good upgrade, only at the right price</span>
+    <span><span class="score score-2">2</span> Modest upgrade</span>
+    <span><span class="score score-1">1</span> Not clearly better than standard</span>
+  </div>
+  <div class="toolbar">
+    <input type="text" id="search-audiophile" placeholder="Search..." oninput="renderAudiophile()">
+    <div class="genre-btns" id="genre-btns-audiophile"></div>
+    <button class="got-toggle" id="hide-got-audiophile" onclick="toggleHideGot('audiophile')">Hide got</button>
+    <span class="badge" id="badge-audiophile"></span>
+  </div>
+  <div class="tab-content">
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th class="cell-expand"></th><th class="cell-score">Score</th><th class="cell-artist">Artist</th>
+        <th class="cell-album">Album</th><th class="cell-label">Label</th><th class="cell-cat">Cat #</th>
+        <th class="cell-price">Price</th><th class="cell-tip">Quick tip</th><th class="cell-got">Got</th>
+      </tr></thead>
+      <tbody id="tbody-audiophile"></tbody>
+    </table></div>
+  </div>
+</div>
+<div id="tab-standard" style="display:none">
+  <div class="toolbar">
+    <input type="text" id="search-standard" placeholder="Search..." oninput="renderStandard()">
+    <div class="genre-btns" id="genre-btns-standard"></div>
+    <button class="got-toggle" id="hide-got-standard" onclick="toggleHideGot('standard')">Hide got</button>
+    <span class="badge" id="badge-standard"></span>
+  </div>
+  <div class="tab-content">
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th class="cell-expand"></th><th class="cell-artist">Artist</th><th class="cell-album">Album</th>
+        <th class="cell-label">Label</th><th class="cell-cat">Cat #</th><th class="cell-price">Price</th>
+        <th class="cell-tip">Quick tip</th><th class="cell-ap">AP?</th><th class="cell-got">Got</th>
+      </tr></thead>
+      <tbody id="tbody-standard"></tbody>
+    </table></div>
+  </div>
+</div>
+<div id="tab-boxsets" style="display:none">
+  <div class="toolbar">
+    <input type="text" id="search-boxsets" placeholder="Search..." oninput="renderBoxsets()">
+    <div class="genre-btns" id="genre-btns-boxsets"></div>
+    <button class="got-toggle" id="hide-got-boxsets" onclick="toggleHideGot('boxsets')">Hide got</button>
+    <span class="badge" id="badge-boxsets"></span>
+  </div>
+  <div class="tab-content">
+    <div class="box-grid" id="box-grid"></div>
+  </div>
+</div>
+<script>
+const STORAGE_KEY = 'cd-wanted-v2';
+const GENRE_ORDER = ['Rock/Pop','Jazz','Classical','Country','Soul/R&B'];
+
+const AUDIOPHILE = [
+  {id:'a29',score:5,gold:false,genre:"Rock/Pop",sortKey:"Beach Boys",artist:"The Beach Boys",album:"Pet Sounds",label:"Analogue Productions",cat:"CAPP 067 SA",priceLow:30,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Includes both mono and stereo.",detail:"Kevin Gray mastering. Both mono and stereo. Early Capitol CDP 7 48421 2 at $6-14 is the standard alt."},
+  {id:'a30',score:5,gold:false,genre:"Rock/Pop",sortKey:"Dylan",artist:"Bob Dylan",album:"Blood on the Tracks",label:"MoFi",cat:"CMOB 2098 SA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. No DCC or AP exists for this title.",detail:"Rob LoVerde and Shawn Britton mastering. The only audiophile pressing for this title. Early Columbia JC 33235 at $6-14 is the standard alt."},
+  {id:'a42',score:5,gold:true,genre:"Rock/Pop",sortKey:"Dylan",artist:"Bob Dylan",album:"Highway 61 Revisited",label:"DCC",cat:"GZS-1021",priceLow:60,priceHigh:120,spotIt:"24kt gold. 'GZS-1021' matrix. 'MFD BY JVC' inner ring. Forum consensus #1 DCC release.",detail:"Steve Hoffman mastering. Forum consensus #1 DCC title. Early Columbia CK 9189 at $6-14 is the standard alt."},
+  {id:'a35',score:4,gold:false,genre:"Rock/Pop",sortKey:"Eagles",artist:"Eagles",album:"Eagles (self-titled)",label:"MoFi",cat:"CMOB 2229 SA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. Corrects channel reversal of early Asylum pressing.",detail:"Glyn Johns recording, channel reversal and speed issues corrected. Early Asylum 7559-60623-2 at $5-10 has these errors but is still the standard alt."},
+  {id:'a60',score:4,gold:false,genre:"Rock/Pop",sortKey:"Fleetwood Mac",artist:"Fleetwood Mac",album:"Fleetwood Mac (1975)",label:"MoFi",cat:"UDSACD2311",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. 'UDSACD2311' on disc. From original analog master tapes.",detail:"Sourced from original analog master tapes. Gatefold mini-LP packaging. Early Warner Bros. BSK 3559 at $5-12 is the standard alt."},
+  {id:'a61',score:4,gold:false,genre:"Rock/Pop",sortKey:"Fleetwood Mac",artist:"Fleetwood Mac",album:"Rumours",label:"MoFi",cat:"UDSACD SA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD, Nov 2025. MoFi sticker. Also: Japan Warner WPCR-14171 is a solid alternative.",detail:"MoFi Nov 2025 release from original analog master tapes. Forum consensus: good but not a massive gap over the best standard pressings. Japan WPCR-14171 SACD at $20-35 is a cheaper alternative. Early Warner Bros. BSK 3010 at $5-12 is the standard alt."},
+    {id:'a4',score:4,gold:true,genre:"Rock/Pop",sortKey:"Gabriel",artist:"Peter Gabriel",album:"So",label:"MFSL",cat:"UDCD 729",priceLow:30,priceHigh:45,spotIt:"24kt gold disc. 'MFSL' on disc hub. 'MFD BY JVC' in matrix ring.",detail:"UltraDisc II. Upgrades your Geffen 9 24088-2. Check matrix for 'UDCD 729' and 'MFD BY JVC'."},
+  {id:'a64',score:3,gold:false,genre:"Rock/Pop",sortKey:"Harrison",artist:"George Harrison",album:"All Things Must Pass",label:"Toshiba-EMI Japan",cat:"CP28-5459/60",priceLow:25,priceHigh:50,spotIt:"2CD Japan set. 'CP28-5459/60' on discs. Toshiba-EMI label. No 'Remastered' text. 1987 pressing.",detail:"Forum consensus best CD version. Beats UK Nimbus CDP in direct comparisons. Avoid 2001 remaster (harsh), WEA/Capitol US pressings, and the 2021 Hicks remix. No MoFi or DCC exists for this title."},
+    {id:'a8',score:5,gold:false,genre:"Rock/Pop",sortKey:"Grateful Dead",artist:"Grateful Dead",album:"Workingman's Dead",label:"MoFi",cat:"UDSACD 2136",priceLow:25,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. Plays on any CD player.",detail:"GAIN 2 System. Upgrades your Warner Bros. 1869-2. Meaningful step up on acoustic clarity."},
+  {id:'a9',score:5,gold:false,genre:"Rock/Pop",sortKey:"Grateful Dead",artist:"Grateful Dead",album:"American Beauty",label:"MoFi",cat:"UDSACD 2138",priceLow:25,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. Plays on any CD player.",detail:"GAIN 2 System. Upgrades your Warner Bros. 1893-2."},
+  {id:'a12',score:3,gold:false,genre:"Rock/Pop",sortKey:"John",artist:"Elton John",album:"Madman Across the Water",label:"Rocket",cat:"B0003610-36",priceLow:15,priceHigh:30,spotIt:"'Rocket' label. Hybrid SACD. 2004 pressing. Plays on any CD player.",detail:"Tony Cousins at Metropolis. Includes extended Razor Face. MFSL UDCD-516 gold also works at $25-35."},
+  {id:'a13',score:4,gold:false,genre:"Rock/Pop",sortKey:"John",artist:"Elton John",album:"Goodbye Yellow Brick Road",label:"Rocket",cat:"B0001570-36",priceLow:15,priceHigh:30,spotIt:"'Rocket' label. Hybrid SACD. 2004 pressing. Plays on any CD player.",detail:"Forum consensus: sounds incredible. Meaningful upgrade over your Polydor DIDX 033188."},
+
+
+
+  {id:'a46',score:5,gold:true,genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Led Zeppelin II",label:"DCC",cat:"GZS-1104",priceLow:60,priceHigh:110,spotIt:"24kt gold. 'GZS-1104' matrix. 'MFD BY JVC' inner ring. Most sought-after DCC rock title.",detail:"Steve Hoffman mastering. Most sought-after DCC rock release. Early Atlantic SD 8236-2 W.Germany at $6-15 is the standard alt."},
+  {id:'a51',score:5,gold:false,genre:"Rock/Pop",sortKey:"Lofgren",artist:"Nils Lofgren",album:"Acoustic Live",label:"Analogue Productions",cat:"CAPP-090-SA",priceLow:25,priceHigh:40,spotIt:"'Analogue Productions' prominently printed. Ryan Smith at Sterling Sound 2016.",detail:"One of the most cited audiophile demo discs for acoustic guitar. HiFi News 91%. Original CD at $8-12 is genuinely good but the AP is a clear step up."},
+
+  {id:'a20',score:3,gold:true,genre:"Rock/Pop",sortKey:"Mitchell",artist:"Joni Mitchell",album:"Blue",label:"DCC",cat:"GZS-1132",priceLow:35,priceHigh:80,spotIt:"24kt gold. 'GZS-1132' matrix. Must have slipcase -- incomplete copies worth much less.",detail:"Only buy if complete with slipcase. MoFi SACD available new. You own Japanese WPCR-14096 which is already solid."},
+  {id:'a2',score:5,gold:false,genre:"Rock/Pop",sortKey:"Mitchell",artist:"Joni Mitchell",album:"Hejira",label:"MoFi",cat:"CMOB SA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD, Aug 2025. MoFi sticker. Check number on spine.",detail:"GAIN HD System from original 1/4 inch 15 IPS Dolby A master tapes. Pastorius's fretless bass at its best. Upgrades your Asylum 1087-2."},
+  {id:'a3',score:5,gold:false,genre:"Rock/Pop",sortKey:"Mitchell",artist:"Joni Mitchell",album:"The Hissing of Summer Lawns",label:"MoFi",cat:"TBA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD -- not yet released as of early 2026. Watch mofi.com.",detail:"Announced but unreleased. Will upgrade your Asylum 1051-2. Watch mofi.com."},
+  {id:'a28',score:4,gold:false,genre:"Rock/Pop",sortKey:"Morrison",artist:"Van Morrison",album:"Astral Weeks",label:"Analogue Productions",cat:"CAPP 200 SA",priceLow:35,priceHigh:40,spotIt:"'Analogue Productions' prominently printed. Kevin Gray mastering noted on liner.",detail:"Kevin Gray from original Warner analog tapes. Definitive version. Early Warner Bros. 1839-2 at $5-12 is the standard alt."},
+  {id:'a19',score:4,gold:true,genre:"Rock/Pop",sortKey:"Pink Floyd",artist:"Pink Floyd",album:"The Dark Side of the Moon",label:"MFSL",cat:"UDCD 517",priceLow:50,priceHigh:75,spotIt:"24kt gold disc. 'UDCD 517' matrix. 'MFD BY JVC' inner ring. Avoid later 'SACD' versions over $100.",detail:"UltraDisc gold. Early EMI Harvest CDP 7 46001 2 W.Germany at $8-18 is the standard alt."},
+  {id:'a62',score:4,gold:true,genre:"Rock/Pop",sortKey:"Petty",artist:"Tom Petty",album:"Full Moon Fever",label:"MoFi",cat:"UDCD 672",priceLow:25,priceHigh:45,spotIt:"24kt gold. 'UDCD 672' matrix. 'MFD BY JVC' inner ring. First title mastered with MoFi GAIN 2 system.",detail:"MoFi UltraDisc II gold, 1998. First title remastered using MoFi GAIN 2 system. Early MCA MCAD-6253 W.Germany pressing at $6-12 is the standard alt."},
+    {id:'a45',score:4,gold:true,genre:"Rock/Pop",sortKey:"Presley",artist:"Elvis Presley",album:"Elvis Is Back!",label:"DCC",cat:"GZS-1069",priceLow:35,priceHigh:65,spotIt:"24kt gold. 'GZS-1069' matrix. 'MFD BY JVC' inner ring.",detail:"Among Hoffman's finest mastering work. Early RCA AFLI-2231 at $5-12 is the standard alt."},
+  {id:'a24',score:4,gold:true,genre:"Rock/Pop",sortKey:"Raitt",artist:"Bonnie Raitt",album:"Nick of Time",label:"MFSL",cat:"UDCD 717",priceLow:25,priceHigh:40,spotIt:"24kt gold. 'UDCD 717' matrix. 'MFD BY JVC' inner ring.",detail:"UltraDisc II. Early Capitol CDP 7 91268 2 at $5-12 is the standard alt."},
+  {id:'a21',score:4,gold:true,genre:"Rock/Pop",sortKey:"Ronstadt",artist:"Linda Ronstadt",album:"Heart Like a Wheel",label:"MFSL",cat:"UDCD 626",priceLow:25,priceHigh:40,spotIt:"24kt gold. 'UDCD 626' matrix. 'MFD BY JVC' inner ring.",detail:"UltraDisc II. Early Capitol CDP 7 46069 2 at $5-12 is the standard alt."},
+  {id:'a32',score:5,gold:false,genre:"Rock/Pop",sortKey:"Simon Garfunkel",artist:"Simon & Garfunkel",album:"Bridge Over Troubled Water",label:"MoFi",cat:"CMOB SA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. Large gap over standard pressings.",detail:"Genuine revelation on this title per consensus. Upgrades your Columbia CK 9914 significantly."},
+  {id:'a23',score:4,gold:false,genre:"Rock/Pop",sortKey:"Taylor",artist:"James Taylor",album:"Sweet Baby James",label:"Audio Fidelity",cat:"AFZ 118",priceLow:20,priceHigh:35,spotIt:"'Audio Fidelity' label. Silver/gold disc. Hoffman name on back.",detail:"Steve Hoffman: first time cut from actual masters. W.Germany Polygram target at $8-15 is the standard alt."},
+  {id:'a49',score:4,gold:true,genre:"Rock/Pop",sortKey:"Taylor",artist:"James Taylor",album:"Greatest Hits",label:"DCC",cat:"GZS-1059",priceLow:40,priceHigh:70,spotIt:"24kt gold. 'GZS-1059' matrix. 'MFD BY JVC' inner ring.",detail:"Steve Hoffman mastering. Meaningful upgrade over your Warner Bros. 3113-2."},
+  {id:'a65',score:4,gold:true,genre:"Rock/Pop",sortKey:"XTC",artist:"XTC",album:"Skylarking",label:"MFSL",cat:"UDCD 615",priceLow:25,priceHigh:45,spotIt:"24kt gold. 'UDCD 615' matrix. 'MFD BY JVC' inner ring. Todd Rundgren production.",detail:"MoFi UltraDisc gold. Best CD version. Early Geffen 9 24117-2 at $6-12 is the standard alt. All US CD pressings include 'Dear God' replacing 'Mermaid Smiled'."},
+    {id:'a36',score:4,gold:false,genre:"Rock/Pop",sortKey:"Zevon",artist:"Warren Zevon",album:"Excitable Boy",label:"MoFi",cat:"CMOB SA",priceLow:30,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. Krieg Wunderlich mastering.",detail:"Audio Fidelity SACD AFZ 166 (Hoffman, warmer) is an alternative. Both upgrade your early Asylum 118-2."},
+  {id:'a36b',score:4,gold:false,genre:"Rock/Pop",sortKey:"Zevon",artist:"Warren Zevon",album:"Excitable Boy",label:"Audio Fidelity",cat:"AFZ 166",priceLow:30,priceHigh:40,spotIt:"'Audio Fidelity' label. Hoffman name on back. Warmer character than MoFi.",detail:"Steve Hoffman mastering. Warmer than the MoFi. Both are meaningful upgrades over early Asylum 118-2."},
+
+  {id:'a16',score:5,gold:false,genre:"Jazz",sortKey:"Coltrane",artist:"John Coltrane",album:"Giant Steps",label:"Analogue Productions",cat:"CAPP 1311 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Ryan K. Smith 2024.",detail:"Ryan K. Smith mastering, 2024. Definitive version. Early Atlantic W.Germany alt at $6-14."},
+  {id:'a10',score:5,gold:false,genre:"Jazz",sortKey:"Evans",artist:"Bill Evans Trio",album:"Waltz for Debby",label:"Analogue Productions",cat:"CAPJ 9399 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Hybrid SACD label on disc.",detail:"Clear upgrade over your OJC OJCCD-210-2. AP is the reference for this title."},
+  {id:'a18',score:5,gold:false,genre:"Jazz",sortKey:"Evans",artist:"Bill Evans Trio",album:"Sunday at the Village Vanguard",label:"Analogue Productions",cat:"CAPJ 9376 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Hybrid SACD.",detail:"Keepnews Riverside transfer basis. OJC OJCCD-140-2 at $6-12 is the affordable alternative."},
+  {id:'a47',score:5,gold:true,genre:"Jazz",sortKey:"Garland",artist:"Judy Garland",album:"Judy at Carnegie Hall",label:"DCC",cat:"GZS-1034",priceLow:35,priceHigh:65,spotIt:"24kt gold. 'GZS-1034' matrix. 'MFD BY JVC' inner ring. 1961 live recording.",detail:"1961 live recording transformed by Hoffman mastering. Early Capitol STBO 1569-2 at $8-15 is the standard alt."},
+  {id:'a27',score:5,gold:false,genre:"Jazz",sortKey:"Getz Gilberto",artist:"Stan Getz / Joao Gilberto",album:"Getz/Gilberto",label:"Analogue Productions",cat:"CAPV 8545 SA",priceLow:20,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Hybrid SACD.",detail:"Early Verve 810 048-2 W.Germany at $6-14 is a solid standard alt."},
+  {id:'a26',score:5,gold:true,genre:"Jazz",sortKey:"Montgomery",artist:"Wes Montgomery",album:"Full House",label:"DCC",cat:"GZS-1109",priceLow:40,priceHigh:65,spotIt:"24kt gold. 'GZS-1109' matrix. 'MFD BY JVC' inner ring.",detail:"Steve Hoffman mastering. OJC OJCCD-106-2 at $6-14 is the affordable alternative."},
+  {id:'a63',score:5,gold:false,genre:"Jazz",sortKey:"Quebec",artist:"Ike Quebec",album:"Blue & Sentimental",label:"Analogue Productions",cat:"CBNJ 84098 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. 'CBNJ 84098 SA' on disc. Hybrid SACD.",detail:"Forum consensus best version. Warm, rich, analogue-sounding. Kevin Gray mastering. Grant Green on guitar, Paul Chambers, Philly Joe Jones. Early Blue Note CDP 7 84123 2 at $8-15 is the standard alt."},
+    {id:'a17',score:5,gold:false,genre:"Jazz",sortKey:"Rollins",artist:"Sonny Rollins",album:"Saxophone Colossus",label:"Analogue Productions",cat:"CAPJ 7079 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Hybrid SACD.",detail:"Clear upgrade. OJC OJCCD-291-2 is the affordable alternative at $6-12."},
+  {id:'a50',score:4,gold:true,genre:"Classical",sortKey:"Sinatra",artist:"Frank Sinatra",album:"In the Wee Small Hours",label:"DCC",cat:"GZS-1044",priceLow:40,priceHigh:75,spotIt:"24kt gold. 'GZS-1044' matrix. 'MFD BY JVC' inner ring. Avoid 1998 Capitol 72434 series.",detail:"MFSL UDCD 791 is an equivalent alternative. Both forum top 5. Early Capitol CDP 7 96826 2 (pre-1998) at $6-14 is the standard alt."},
+  {id:'a50b',score:4,gold:true,genre:"Classical",sortKey:"Sinatra",artist:"Frank Sinatra",album:"In the Wee Small Hours",label:"MFSL",cat:"UDCD 791",priceLow:40,priceHigh:75,spotIt:"24kt gold. 'UDCD 791' matrix. 'MFD BY JVC' inner ring. Forum top 5.",detail:"Equivalent to DCC GZS-1044. Both are top picks. Avoid 1998 Capitol 72434 series."},
+  {id:'a31',score:4,gold:false,genre:"Soul/R&B",sortKey:"Jackson",artist:"Michael Jackson",album:"Thriller",label:"MoFi",cat:"CMOB 2251 SA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. Greg Calbi at Sterling Sound.",detail:"Clear upgrade. Early Epic FE 38112 'Manufactured by CBS' at $6-10 is the standard alt."},
+  {id:'a33',score:5,gold:false,genre:"Soul/R&B",sortKey:"Withers",artist:"Bill Withers",album:"Live at Carnegie Hall",label:"MoFi",cat:"CMOB SA",priceLow:35,priceHigh:40,spotIt:"Numbered hybrid SACD. MoFi sticker. No equivalent pressing exists.",detail:"1973 Columbia live recording. No equivalent at any price. Complete catalogue gap."},
+];
+
+const STANDARD = [
+  {id:'s34',genre:"Rock/Pop",sortKey:"Beach Boys",artist:"The Beach Boys",album:"Pet Sounds",label:"Capitol",cat:"CDP 7 48421 2",priceLow:6,priceHigh:14,spotIt:"Early Capitol. Original mono/stereo transfer. No remaster sticker.",detail:"AP SACD CAPP 067 SA (includes mono and stereo) is the audiophile target.",apId:"a29"},
+  {id:'s54',genre:"Rock/Pop",sortKey:"Beck",artist:"Beck",album:"Sea Change",label:"Geffen",cat:"069 493 393-2",priceLow:6,priceHigh:14,spotIt:"Geffen 2002. Well-mastered, dynamic. No audiophile pressing needed.",detail:"Well-mastered, dynamic original pressing. No specialist pressing needed.",apId:null},
+  {id:'s55',genre:"Rock/Pop",sortKey:"Cowboy Junkies",artist:"Cowboy Junkies",album:"The Trinity Session",label:"RCA",cat:"8568-2-R",priceLow:5,priceHigh:12,spotIt:"Original RCA 1988. Recorded live to 2-track. No audiophile pressing needed.",detail:"Original recording quality is inherently audiophile. Original RCA is the reference.",apId:null},
+  {id:'s8',genre:"Rock/Pop",sortKey:"Dylan",artist:"Bob Dylan",album:"Blood on the Tracks",label:"Columbia",cat:"JC 33235",priceLow:6,priceHigh:14,spotIt:"Original analog transfer. Early Columbia. No 'Remastered' sticker.",detail:"Pre-loudness-war transfer. MoFi SACD CMOB 2098 SA is the audiophile target.",apId:"a30"},
+  {id:'s9',genre:"Rock/Pop",sortKey:"Dylan",artist:"Bob Dylan",album:"Highway 61 Revisited",label:"Columbia",cat:"CK 9189",priceLow:6,priceHigh:14,spotIt:"Early Columbia. Original analog transfer. Pre-loudness-war.",detail:"DCC GZS-1021 is the forum consensus #1 DCC release -- the audiophile target.",apId:"a42"},
+  {id:'s39',genre:"Rock/Pop",sortKey:"Eagles",artist:"Eagles",album:"Eagles (self-titled)",label:"Asylum",cat:"7559-60623-2",priceLow:5,priceHigh:10,spotIt:"Early Asylum. Note: channels are reversed vs intended -- known issue on all standard pressings.",detail:"Flat transfer, Hoffman-approved, DR12, but channels reversed. MoFi SACD CMOB 2229 SA corrects this.",apId:"a35"},
+
+
+  {id:'s100',genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Led Zeppelin I",label:"Atlantic",cat:"SD 19126-2",priceLow:6,priceHigh:15,spotIt:"Look for 'PR' matrix suffix on disc. Early Atlantic. Avoid post-1990 remaster sticker.",detail:"Early PR matrix Atlantic pressing is the best standard version. 1990 Page-supervised remaster is decent fallback. DCC GZS-1104 exists for Zep II only.",apId:null},
+  {id:'s101',genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Led Zeppelin III",label:"Atlantic",cat:"SD 7201-2",priceLow:6,priceHigh:15,spotIt:"Look for 'PR' matrix suffix on disc. Early Atlantic. Avoid post-1990 remaster sticker.",detail:"Early PR matrix Atlantic pressing is the best standard version. No audiophile pressing exists for this title.",apId:null},
+  {id:'s102',genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Led Zeppelin IV",label:"Atlantic",cat:"SD 7208-2",priceLow:6,priceHigh:15,spotIt:"Look for 'PR' matrix suffix on disc. Early Atlantic. Avoid post-1990 remaster sticker.",detail:"Early PR matrix Atlantic pressing is the best standard version. No audiophile pressing exists for this title.",apId:null},
+  {id:'s103',genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Houses of the Holy",label:"Atlantic",cat:"SD 7255-2",priceLow:6,priceHigh:15,spotIt:"Look for 'PR' matrix suffix on disc. Early Atlantic. Avoid post-1990 remaster sticker.",detail:"Early PR matrix Atlantic pressing is the best standard version. No audiophile pressing exists for this title.",apId:null},
+  {id:'s104',genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Physical Graffiti",label:"Atlantic",cat:"SS 2-200-2",priceLow:8,priceHigh:18,spotIt:"Look for 'PR' matrix suffix on disc. Early Atlantic 2CD. Avoid post-1990 remaster sticker.",detail:"Early PR matrix Atlantic pressing is the best standard version. Double album so slightly pricier. No audiophile pressing exists for this title.",apId:null},
+    {id:'s47',genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Led Zeppelin II",label:"Atlantic",cat:"SD 8236-2 W.Germany",priceLow:6,priceHigh:15,spotIt:"'Made in W.Germany' inner ring. Atlantic label. 'PR' matrix suffix.",detail:"DCC GZS-1104 is the most sought-after DCC rock title -- the audiophile target.",apId:"a46"},
+  {id:'s51',genre:"Rock/Pop",sortKey:"Lofgren",artist:"Nils Lofgren",album:"Acoustic Live",label:"Rykodisc",cat:"740155093426",priceLow:8,priceHigh:12,spotIt:"Bill Wolf mastering. Original CD. Genuinely good at this price.",detail:"AP SACD CAPP-090-SA is the audiophile target, but original is genuinely good.",apId:"a51"},
+  {id:'s59',genre:"Rock/Pop",sortKey:"Metheny",artist:"Pat Metheny Group",album:"Still Life (Talking)",label:"Geffen",cat:"9 24145-2",priceLow:6,priceHigh:14,spotIt:"Early Geffen. Pre-loudness-war. Lush natural sound.",detail:"No audiophile pressing exists. Early Geffen is the reference.",apId:null},
+  {id:'s60',genre:"Rock/Pop",sortKey:"Metheny",artist:"Pat Metheny Group",album:"Letter from Home",label:"Geffen",cat:"9 24245-2",priceLow:6,priceHigh:14,spotIt:"Early Geffen. Pre-loudness-war. Companion to Still Life.",detail:"No audiophile pressing exists. Early Geffen is the reference.",apId:null},
+  {id:'s4',genre:"Rock/Pop",sortKey:"Mitchell",artist:"Joni Mitchell",album:"Blue",label:"Reprise/Asylum",cat:"MS 2038-2",priceLow:5,priceHigh:12,spotIt:"Early pressing. No remaster sticker. Japan WPCR-14096 is the best standard pressing.",detail:"You own Japanese WPCR-14096 which is solid. DCC GZS-1132 is the audiophile target.",apId:"a20"},
+  {id:'s32',genre:"Rock/Pop",sortKey:"Morrison",artist:"Van Morrison",album:"Astral Weeks",label:"Warner Bros.",cat:"1839-2",priceLow:5,priceHigh:12,spotIt:"Early Warner Bros. Pre-2015 remaster. No 'Remastered' sticker.",detail:"AP SACD CAPP 200 SA is the audiophile target. This is the budget fallback.",apId:"a28"},
+  {id:'s33',genre:"Rock/Pop",sortKey:"Morrison",artist:"Van Morrison",album:"Moondance",label:"Warner Bros.",cat:"3103-2",priceLow:5,priceHigh:12,spotIt:"Early Warner Bros. Pre-loudness-war. No remaster sticker.",detail:"Pre-loudness-war transfer. No audiophile pressing exists for this title.",apId:null},
+  {id:'s15',genre:"Rock/Pop",sortKey:"Pink Floyd",artist:"Pink Floyd",album:"The Dark Side of the Moon",label:"EMI Harvest",cat:"CDP 7 46001 2",priceLow:8,priceHigh:18,spotIt:"'Made in W.Germany' inner ring. EMI Harvest label. Original digital transfer.",detail:"W.Germany pressing is the best standard version. MFSL UDCD 517 gold is the audiophile target.",apId:"a19"},
+  {id:'s84',genre:"Rock/Pop",sortKey:"Petty",artist:"Tom Petty",album:"Full Moon Fever",label:"MCA",cat:"MCAD-6253",priceLow:6,priceHigh:12,spotIt:"Original 1989 MCA. Look for 'Made in W.Germany' or 'Manufactured by Teldec' on disc. Avoid post-2000 reissues.",detail:"Early W.Germany Teldec pressing is the best standard version. MoFi UDCD 672 gold is the audiophile target.",apId:"a62"},
+    {id:'s46',genre:"Rock/Pop",sortKey:"Presley",artist:"Elvis Presley",album:"Elvis Is Back!",label:"RCA",cat:"AFLI-2231-2",priceLow:5,priceHigh:12,spotIt:"Early RCA. Original analog transfer. No remaster sticker.",detail:"DCC GZS-1069 Hoffman is the audiophile target.",apId:"a45"},
+  {id:'s25',genre:"Rock/Pop",sortKey:"Raitt",artist:"Bonnie Raitt",album:"Nick of Time",label:"Capitol",cat:"CDP 7 91268 2",priceLow:5,priceHigh:12,spotIt:"Early Capitol. No remaster sticker. Pre-loudness-war.",detail:"MFSL UDCD 717 gold is the audiophile target.",apId:"a24"},
+  {id:'s21',genre:"Rock/Pop",sortKey:"Ronstadt",artist:"Linda Ronstadt",album:"Heart Like a Wheel",label:"Capitol",cat:"CDP 7 46069 2",priceLow:5,priceHigh:12,spotIt:"Early Capitol. No remaster sticker. Pre-loudness-war original transfer.",detail:"MFSL UDCD 626 gold is the audiophile target.",apId:"a21"},
+  {id:'s121',genre:"Rock/Pop",sortKey:"Rolling Stones",artist:"Rolling Stones",album:"Exile on Main St.",label:"Rolling Stones Records/Virgin",cat:"450 196 2",priceLow:8,priceHigh:15,spotIt:"Early Virgin pressing. No remaster language. 'We have attempted to preserve the sound of the original recording.' Avoid 1999 Bob Ludwig remaster and 2010 remaster with bonus tracks.",detail:"Best CD version by consensus. Murky by design -- the early flat transfer is the most honest to the source. 2010 remaster applies processing that strips the grime. No audiophile pressing exists.",apId:null},
+  {id:'s122',genre:"Rock/Pop",sortKey:"Wilco",artist:"Wilco",album:"Being There",label:"Reprise",cat:"9 46236-2",priceLow:4,priceHigh:8,spotIt:"Original Reprise 2CD. 'Original Issue' sticker if present. No remaster text.",detail:"Original Reprise pressing is the reference. Well-recorded, no pressing concerns. Don't pay more than $8.",apId:null},
+  {id:'s123',genre:"Rock/Pop",sortKey:"XTC",artist:"XTC",album:"Skylarking",label:"Geffen",cat:"9 24117-2",priceLow:6,priceHigh:12,spotIt:"Early Geffen. 'Distributed by Warner Bros.' on label -- preferred over later MCA distribution version. All US CD pressings include 'Dear God'.",detail:"Early Geffen Warner Bros. distribution pressing is the best standard version. MFSL UDCD 615 gold is the audiophile target.",apId:"a65"},
+    {id:'s80',genre:"Rock/Pop",sortKey:"Smiths",artist:"The Smiths",album:"The Smiths",label:"Rough Trade",cat:"ROUGH CD 61",priceLow:8,priceHigh:15,spotIt:"'ROUGH CD 61' on disc. UK original. 'Made in W.Germany' or 'Made in France' on disc. Avoid WEA and Sire reissues.",detail:"Original 1984 Rough Trade UK pressing is the best CD version. WEA and Sire pressings are softer. 2011 Marr remasters are decent but less immediate.",apId:null},
+  {id:'s81',genre:"Rock/Pop",sortKey:"Smiths",artist:"The Smiths",album:"Meat Is Murder",label:"Rough Trade",cat:"ROUGH CD 81",priceLow:8,priceHigh:15,spotIt:"'ROUGH CD 81' on disc. Green monochrome insert with group photo. UK original.",detail:"Original 1985 Rough Trade UK pressing. Look for green insert. US Sire 9 25269-2 adds 'How Soon Is Now' but sounds inferior.",apId:null},
+  {id:'s82',genre:"Rock/Pop",sortKey:"Smiths",artist:"The Smiths",album:"The Queen Is Dead",label:"Rough Trade",cat:"ROUGH CD 96",priceLow:10,priceHigh:20,spotIt:"'ROUGH CD 96' on disc. Made in France (MPO pressing). Most sought-after of the four.",detail:"Original 1986 Rough Trade UK pressing, made in France by MPO. Consistently rated the best digital version. Commands a slight premium over the others.",apId:null},
+  {id:'s83',genre:"Rock/Pop",sortKey:"Smiths",artist:"The Smiths",album:"Strangeways, Here We Come",label:"Rough Trade",cat:"ROUGH CD 106",priceLow:8,priceHigh:15,spotIt:"'ROUGH CD 106' on disc. UK original. Avoid WEA reissues.",detail:"Original 1987 Rough Trade UK pressing. Final studio album. Same rule as the others -- original Rough Trade beats all later reissues.",apId:null},
+  {id:'s57',genre:"Rock/Pop",sortKey:"Van Zandt",artist:"Townes Van Zandt",album:"Live at the Old Quarter",label:"Tomato/Rhino",cat:"R2 70322",priceLow:8,priceHigh:15,spotIt:"Tomato/Rhino pressing. No audiophile pressing exists.",detail:"No specialist pressing exists. Tomato/Rhino is the reference.",apId:null},
+  {id:'s53',genre:"Rock/Pop",sortKey:"Waits",artist:"Tom Waits",album:"Mule Variations",label:"Anti-",cat:"86547-2",priceLow:6,priceHigh:14,spotIt:"Anti- 1999 original. No audiophile pressing exists.",detail:"No specialist pressing exists. Original Anti- is the reference.",apId:null},
+  {id:'s52',genre:"Rock/Pop",sortKey:"Wilco",artist:"Wilco",album:"Yankee Hotel Foxtrot",label:"Nonesuch",cat:"79669-2",priceLow:6,priceHigh:14,spotIt:"Original Nonesuch 2002. No audiophile pressing exists.",detail:"No specialist pressing exists. Original Nonesuch is the reference.",apId:null},
+  {id:'s61',genre:"Rock/Pop",sortKey:"Zevon",artist:"Warren Zevon",album:"Warren Zevon (self-titled)",label:"Asylum",cat:"6E-114-2 W.Germany",priceLow:8,priceHigh:15,spotIt:"'Made in W.Germany by Polygram' inner ring. Jackson Browne produced.",detail:"Same pedigree as your Hearts and Bones W.Germany target. No audiophile pressing.",apId:null},
+  {id:'s28',genre:"Jazz",sortKey:"Adderley",artist:"Cannonball Adderley",album:"Somethin' Else",label:"Blue Note",cat:"CDP 7 46338 2",priceLow:10,priceHigh:15,spotIt:"Early Blue Note RVG edition. 'RVG' stamp inside. Already the affordable reference.",detail:"No audiophile pressing needed -- early Blue Note RVG is the reference for this title.",apId:null},
+
+  {id:'s19',genre:"Jazz",sortKey:"Coltrane",artist:"John Coltrane",album:"Giant Steps",label:"Atlantic",cat:"SD 1311-2 W.Germany",priceLow:6,priceHigh:14,spotIt:"'Made in W.Germany' inner ring. Original Van Gelder transfer. Atlantic label.",detail:"W.Germany pressing preferred. AP SACD CAPP 1311 SA is the audiophile target.",apId:"a16"},
+  {id:'s42',genre:"Jazz",sortKey:"Desmond",artist:"Paul Desmond",album:"Take Ten",label:"Bluebird/RCA",cat:"07863-57491-2",priceLow:6,priceHigh:10,spotIt:"Early Bluebird/RCA. Avoid Classico budget reissue. $6-10 is the right price.",detail:"No audiophile pressing exists. Early Bluebird/RCA is the reference.",apId:null},
+  {id:'s12',genre:"Jazz",sortKey:"Evans",artist:"Bill Evans Trio",album:"Waltz for Debby",label:"OJC",cat:"OJCCD-210-2",priceLow:6,priceHigh:12,spotIt:"OJC label. Keepnews Riverside transfer. Honest and dynamic.",detail:"You own this. AP SACD CAPJ 9399 SA is the clear upgrade.",apId:"a10"},
+  {id:'s13',genre:"Jazz",sortKey:"Evans",artist:"Bill Evans Trio",album:"Sunday at the Village Vanguard",label:"OJC",cat:"OJCCD-140-2",priceLow:6,priceHigh:12,spotIt:"OJC label. Keepnews Riverside transfer. Honest and dynamic.",detail:"AP SACD CAPJ 9376 SA is the audiophile target.",apId:"a18"},
+  {id:'s48',genre:"Jazz",sortKey:"Garland",artist:"Judy Garland",album:"Judy at Carnegie Hall",label:"Capitol",cat:"STBO 1569-2",priceLow:8,priceHigh:15,spotIt:"Early Capitol. Original analog transfer. 1961 live recording.",detail:"DCC GZS-1034 Hoffman is the audiophile target.",apId:"a47"},
+  {id:'s29',genre:"Jazz",sortKey:"Getz Gilberto",artist:"Stan Getz / Joao Gilberto",album:"Getz/Gilberto",label:"Verve",cat:"810 048-2 W.Germany",priceLow:6,priceHigh:14,spotIt:"'Made in W.Germany by Polygram' inner ring. Verve label.",detail:"W.Germany pressing is the best standard version. AP SACD CAPV 8545 SA is the audiophile target.",apId:"a27"},
+  {id:'s30',genre:"Jazz",sortKey:"Hancock",artist:"Herbie Hancock",album:"Maiden Voyage",label:"Blue Note",cat:"CDP 7 46339 2",priceLow:8,priceHigh:10,spotIt:"Early Blue Note. RVG edition preferred. $8-10 is the right price.",detail:"No audiophile pressing needed at this price point -- early Blue Note is the reference.",apId:null},
+  {id:'s90',genre:"Jazz",sortKey:"Burrell",artist:"Kenny Burrell",album:"Midnight Blue",label:"Blue Note",cat:"CDP 7 84123 2",priceLow:8,priceHigh:15,spotIt:"Early Blue Note. 'RVG' stamp inside. No remaster sticker. The definitive after-hours Blue Note record.",detail:"Guitar, organ, tenor sax. Quintessential late-night Blue Note. AP SACD CBNJ 84098 SA is the audiophile target.",apId:"a63"},
+  {id:'s91',genre:"Jazz",sortKey:"Coltrane",artist:"John Coltrane",album:"Ballads",label:"Impulse!",cat:"MCAD-5885",priceLow:8,priceHigh:14,spotIt:"Early MCA/Impulse pressing. 'MCAD' prefix. No remaster sticker. Warmest-sounding Coltrane record.",detail:"Not a Van Gelder session but one of the warmest-sounding Coltrane recordings. Early MCA Impulse pressing is the one to get.",apId:null},
+  {id:'s92',genre:"Jazz",sortKey:"Desmond",artist:"Paul Desmond",album:"Pure Desmond",label:"CTI/Columbia",cat:"CK 33929",priceLow:6,priceHigh:12,spotIt:"CTI/Columbia. 'CK 33929'. Just alto and guitar with Ed Bickert. Incredibly intimate recording.",detail:"Desmond and Ed Bickert, alto and guitar only. One of the most intimate jazz recordings made. No audiophile pressing exists -- early CTI/Columbia is the reference.",apId:null},
+  {id:'s93',genre:"Jazz",sortKey:"Evans",artist:"Bill Evans",album:"Alone",label:"Verve",cat:"833 801-2 W.Germany",priceLow:6,priceHigh:14,spotIt:"Early Verve. 'Made in W.Germany by Polygram' inner ring. Solo piano. Different character from Village Vanguard recordings.",detail:"Solo piano at its most introspective. W.Germany Polygram pressing preferred. No audiophile pressing exists.",apId:null},
+  {id:'s94',genre:"Jazz",sortKey:"Getz",artist:"Stan Getz",album:"Focus",label:"Verve",cat:"821 982-2 W.Germany",priceLow:6,priceHigh:14,spotIt:"Early Verve. 'Made in W.Germany by Polygram' inner ring. Getz with Eddie Sauter string arrangements.",detail:"Getz with strings, Eddie Sauter arrangements. Quietly one of the most beautiful jazz records ever made. W.Germany Polygram pressing preferred.",apId:null},
+  {id:'s95',genre:"Jazz",sortKey:"Quebec",artist:"Ike Quebec",album:"Blue & Sentimental",label:"Blue Note",cat:"CDP 7 84123 2",priceLow:8,priceHigh:15,spotIt:"Early Blue Note. 'RVG' stamp inside disc. Grant Green on guitar, Paul Chambers, Philly Joe Jones.",detail:"Smoky, late-night masterpiece. RVG recording. AP SACD CBNJ 84098 SA is the audiophile target.",apId:"a63"},
+  {id:'s96',genre:"Jazz",sortKey:"Webster",artist:"Ben Webster",album:"Soulville",label:"Verve",cat:"833 551-2 W.Germany",priceLow:6,priceHigh:14,spotIt:"Early Verve. 'Made in W.Germany by Polygram' inner ring. Webster's most intimate recording.",detail:"Webster's big warm tenor at its most intimate. One of the great late-night records on any instrument. W.Germany Polygram pressing preferred.",apId:null},
+    {id:'s62',genre:"Jazz",sortKey:"Metheny Haden",artist:"Pat Metheny / Charlie Haden",album:"Beyond the Missouri Sky",label:"Verve",cat:"314 537 130-2",priceLow:8,priceHigh:15,spotIt:"Verve 1997. Jan Erik Kongshaug at Rainbow Studio Oslo. Original is audiophile-grade.",detail:"Original recording quality is audiophile-grade. Original Verve is the reference -- no specialist pressing needed.",apId:null},
+  {id:'s27',genre:"Jazz",sortKey:"Montgomery",artist:"Wes Montgomery",album:"Full House",label:"OJC",cat:"OJCCD-106-2",priceLow:6,priceHigh:14,spotIt:"OJC label. Keepnews Riverside transfer. Affordable and honest.",detail:"DCC GZS-1109 Hoffman gold is the audiophile target.",apId:"a26"},
+  {id:'s20',genre:"Jazz",sortKey:"Rollins",artist:"Sonny Rollins",album:"Saxophone Colossus",label:"OJC",cat:"OJCCD-291-2",priceLow:6,priceHigh:12,spotIt:"OJC label. Keepnews Prestige transfer. Honest and cheap.",detail:"AP SACD CAPJ 7079 SA is the audiophile target.",apId:"a17"},
+  {id:'s64',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"The French Suites BWV 812-817",label:"Sony Classical",cat:"SK 37461",priceLow:6,priceHigh:12,spotIt:"Early Sony SK pressing. Single disc. Recorded 1971-1973.",detail:"No audiophile pressing exists. Early Sony SK pressing is the reference.",apId:null},
+  {id:'s65',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"The Partitas BWV 825-830",label:"Sony Classical",cat:"SM2K 52597",priceLow:8,priceHigh:15,spotIt:"Early Sony SM2K pressing. 2-CD. Partita No. 6 in E minor is extraordinary.",detail:"No audiophile pressing exists. Early Sony SK pressing is the reference.",apId:null},
+  {id:'s66',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"Well-Tempered Clavier Bk I",label:"Sony Classical",cat:"SM2K 52600",priceLow:8,priceHigh:15,spotIt:"Early Sony SM2K pressing. 2-CD. 'SK' inner catalog numbers.",detail:"No audiophile pressing exists. Early Sony SK pressing is the reference.",apId:null},
+  {id:'s67',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"Well-Tempered Clavier Bk II",label:"Sony Classical",cat:"SM2K 52603",priceLow:8,priceHigh:15,spotIt:"Early Sony SM2K pressing. 2-CD. Recorded 1969-1971.",detail:"No audiophile pressing exists. Early Sony SK pressing is the reference.",apId:null},
+  {id:'s50',genre:"Classical",sortKey:"Sinatra",artist:"Frank Sinatra",album:"In the Wee Small Hours",label:"Capitol",cat:"CDP 7 96826 2",priceLow:6,priceHigh:14,spotIt:"Pre-1998 Capitol. No '72434' series. Original analog transfer.",detail:"DCC GZS-1044 or MFSL UDCD 791 are the audiophile targets.",apId:"a50"},
+  {id:'s56',genre:"Country",sortKey:"Harris",artist:"Emmylou Harris",album:"Pieces of the Sky",label:"Reprise",cat:"2213-2",priceLow:5,priceHigh:12,spotIt:"Early Reprise pressing. No remaster sticker.",detail:"Pre-loudness-war. No audiophile pressing exists.",apId:null},
+  {id:'s58',genre:"Jazz",sortKey:"Krall",artist:"Diana Krall",album:"When I Look in Your Eyes",label:"Verve",cat:"304 547 187-2",priceLow:5,priceHigh:12,spotIt:"Verve 1999. Well-recorded original.",detail:"Well-recorded original. No specialist pressing needed.",apId:null},
+  {id:'s57b',genre:"Country",sortKey:"Van Zandt",artist:"Townes Van Zandt",album:"Live at the Old Quarter",label:"Tomato/Rhino",cat:"R2 70322",priceLow:8,priceHigh:15,spotIt:"Tomato/Rhino pressing. No audiophile pressing exists.",detail:"No specialist pressing exists. Tomato/Rhino is the reference.",apId:null},
+  {id:'s110',genre:"Soul/R&B",sortKey:"Cooke",artist:"Sam Cooke",album:"Live at the Harlem Square Club",label:"RCA",cat:"PCD1-5181",priceLow:6,priceHigh:14,spotIt:"Early RCA pressing. No remaster sticker. Raw, intimate 1963 live recording. Arguably the greatest live soul recording ever made.",detail:"Early RCA pressing is the reference. No audiophile pressing exists. Extraordinary dynamic range and presence.",apId:null},
+  {id:'s111',genre:"Soul/R&B",sortKey:"Gaye",artist:"Marvin Gaye",album:"Let's Get It On",label:"Tamla/Motown",cat:"MOTD-5194",priceLow:6,priceHigh:12,spotIt:"Early Tamla Motown pressing. No remaster sticker. One of the best-recorded soul albums ever made.",detail:"Early Tamla pressing is the reference. Rich, warm, intimate recording. No meaningful audiophile pressing exists at a justifiable price.",apId:null},
+  {id:'s112',genre:"Soul/R&B",sortKey:"Green",artist:"Al Green",album:"Let's Stay Together",label:"Hi/London",cat:"828 766-2",priceLow:6,priceHigh:14,spotIt:"Early Hi Records/London pressing. Willie Mitchell production at Royal Recording Memphis. No remaster sticker.",detail:"Willie Mitchell's production at Royal Recording in Memphis is some of the warmest studio sound on any format. Early Hi/London pressing is the reference.",apId:null},
+  {id:'s113',genre:"Soul/R&B",sortKey:"Green",artist:"Al Green",album:"I'm Still in Love With You",label:"Hi/London",cat:"828 767-2",priceLow:6,priceHigh:14,spotIt:"Early Hi Records/London pressing. Willie Mitchell production. No remaster sticker.",detail:"Companion to Let's Stay Together. Same Hi/London pedigree. Early pressing is the reference.",apId:null},
+  {id:'s114',genre:"Soul/R&B",sortKey:"Hayes",artist:"Isaac Hayes",album:"Hot Buttered Soul",label:"Enterprise/Stax",cat:"ECD-1001-2",priceLow:6,priceHigh:14,spotIt:"Early Enterprise/Stax pressing. Long-form arrangements, deep bass, extraordinary dynamic range. No remaster sticker.",detail:"One of the best-sounding funk records ever made. Early Enterprise/Stax pressing is the reference. No audiophile pressing exists.",apId:null},
+  {id:'s115',genre:"Soul/R&B",sortKey:"Mayfield",artist:"Curtis Mayfield",album:"Superfly",label:"Curtom",cat:"CUR2-5013",priceLow:6,priceHigh:14,spotIt:"Early Curtom pressing. No remaster sticker. Direct-to-disc almost quality sound.",detail:"One of the best-sounding funk records ever made. Early Curtom pressing is the reference. No audiophile pressing exists.",apId:null},
+  {id:'s116',genre:"Soul/R&B",sortKey:"Redding",artist:"Otis Redding",album:"Otis Blue",label:"Atco/Volt",cat:"8155-2",priceLow:6,priceHigh:14,spotIt:"Early Atco or Volt pressing. No remaster sticker. Several tracks recorded by Van Gelder. Extraordinary dynamic range for 1965.",detail:"Early Atco or Volt pressing is the reference. No audiophile pressing exists. Look for original Volt 412-2 or early Atco transfer.",apId:null},
+  {id:'s117',genre:"Soul/R&B",sortKey:"Wonder",artist:"Stevie Wonder",album:"Talking Book",label:"Tamla/Motown",cat:"MOTD-5239",priceLow:6,priceHigh:12,spotIt:"Early Tamla Motown pressing. No remaster sticker. No 'Definitive Collection' or reissue text.",detail:"Early Tamla pressing is the reference. No meaningful audiophile pressing exists for any Wonder title.",apId:null},
+  {id:'s118',genre:"Soul/R&B",sortKey:"Wonder",artist:"Stevie Wonder",album:"Innervisions",label:"Tamla/Motown",cat:"MOTD-5241",priceLow:6,priceHigh:12,spotIt:"Early Tamla Motown pressing. No remaster sticker.",detail:"Early Tamla pressing is the reference. Extraordinarily well-recorded mid-70s Wonder.",apId:null},
+  {id:'s119',genre:"Soul/R&B",sortKey:"Wonder",artist:"Stevie Wonder",album:"Fulfillingness' First Finale",label:"Tamla/Motown",cat:"MOTD-5242",priceLow:6,priceHigh:12,spotIt:"Early Tamla Motown pressing. No remaster sticker.",detail:"Early Tamla pressing is the reference. Part of the extraordinary mid-70s Wonder run.",apId:null},
+  {id:'s120',genre:"Soul/R&B",sortKey:"Wonder",artist:"Stevie Wonder",album:"Songs in the Key of Life",label:"Tamla/Motown",cat:"MOTD-5243",priceLow:8,priceHigh:15,spotIt:"Early Tamla Motown pressing. 2CD. No remaster sticker. Double album so slightly pricier.",detail:"Early Tamla pressing is the reference. The peak of Wonder's classic run. No audiophile pressing exists.",apId:null},
+    {id:'s31',genre:"Soul/R&B",sortKey:"Gaye",artist:"Marvin Gaye",album:"What's Going On",label:"Motown",cat:"MOTD-5239",priceLow:6,priceHigh:10,spotIt:"Early Motown MOTD-5239 or Harry Weinger remaster 440 016 358-2. Avoid 'Classic Albums' reissue series.",detail:"MFSL UDCD 728 gold at $50-80 if you want to splurge, but early Motown is honest and cheap.",apId:null},
+  {id:'s35',genre:"Soul/R&B",sortKey:"Jackson",artist:"Michael Jackson",album:"Thriller",label:"Epic",cat:"FE 38112",priceLow:6,priceHigh:10,spotIt:"'Manufactured by CBS' on label. Early Epic. No 'Thriller 25' or remaster text.",detail:"Pre-loudness-war. MoFi SACD CMOB 2251 SA is the audiophile target.",apId:"a31"},
+  {id:'s36',genre:"Soul/R&B",sortKey:"Jackson",artist:"Michael Jackson",album:"Off the Wall",label:"Epic",cat:"FE 35745",priceLow:5,priceHigh:12,spotIt:"'Manufactured by CBS' on label. Early Epic. 2001 Legacy EK 69641 also good.",detail:"Early Epic or 2001 Clearmountain remaster EK 69641. No specialist audiophile pressing.",apId:null},
+  // ── MODERN ADDITIONS (post-2000) ──
+  {id:'s121',genre:"Rock/Pop",sortKey:"Wilco",artist:"Wilco",album:"Yankee Hotel Foxtrot",label:"Nonesuch",cat:"79669-2",priceLow:12,priceHigh:20,spotIt:"2022 remaster. 'Remastered by Bob Ludwig' on spine. Standard 2CD or standalone disc. Avoid original 2002 pressing.",detail:"2022 Bob Ludwig remaster at Gateway Mastering, Portland. Significant improvement over compressed 2002 original — more dynamic, more air around the instruments. The 2-disc edition adds The Unified Theory of Everything bonus disc with alternates from the YHF sessions.",apId:null},
+  {id:'s122',genre:"Rock/Pop",sortKey:"Wilco",artist:"Wilco",album:"Summerteeth",label:"Reprise",cat:"47282-2",priceLow:8,priceHigh:15,spotIt:"1999 original Reprise. WEA Olyphant matrix. Mastered at Gateway by Bob Ludwig. Avoid 2003 Cinram repress (CI/CA in matrix).",detail:"1999 original WEA Olyphant pressing, mastered by Bob Ludwig at Gateway Portland. Mixed at Ocean Way. Pre-loudness-war. The original pressing is cleaner and more open than later Cinram represses. Look for 'OLYPHANT' in disc matrix.",apId:null},
+  {id:'s123',genre:"Rock/Pop",sortKey:"Wilco",artist:"Wilco",album:"Being There",label:"Reprise",cat:"9 46236-2",priceLow:8,priceHigh:15,spotIt:"1996 original 2CD. WEA Olyphant matrix. Mastered at Gateway by Bob Ludwig. Pre-loudness-war.",detail:"1996 original 2-disc WEA Olyphant pressing, mastered by Bob Ludwig at Gateway Portland. Mixed at CRC and Ocean Way Chicago. Despite being from 1996, dynamic range is excellent — disc comments note it sounds remarkable even at high volume. Look for 'OLYPHANT' in disc matrix.",apId:null},
+  {id:'s124',genre:"Rock/Pop",sortKey:"Wilco",artist:"Wilco",album:"AM",label:"Reprise",cat:"45934-2",priceLow:5,priceHigh:12,spotIt:"1995 original Reprise. Pre-loudness-war. WEA manufacture.",detail:"Wilco's 1995 debut. Original Reprise pressing is the one to find. Pre-loudness-war, straightforward production by Brian Paulson and Wilco. Worth grabbing cheap in used bins.",apId:null},
+  {id:'s125',genre:"Rock/Pop",sortKey:"My Morning Jacket",artist:"My Morning Jacket",album:"It Still Moves",label:"ATO",cat:"ATO0048 / 82876 52979-2",priceLow:8,priceHigh:16,spotIt:"2003 ATO Records. IFPI L136 mastering SID. Reverb-heavy recording from Above the Cadillac Studios, Shelbyville KY. Avoid 2016 remaster (different track listing).",detail:"Recorded at Above the Cadillac Studios by Jim James, horns at Willie Mitchell's Royal Studios, mixed at Capitol Studio C. Original 2003 ATO pressing is the reference. A 2016 deluxe reissue exists remixed by Kevin Ratterman and remastered by Ludwig — worth having if you want the extras, but the original mix is the classic version.",apId:null},
+  {id:'s126',genre:"Rock/Pop",sortKey:"My Morning Jacket",artist:"My Morning Jacket",album:"Z",label:"ATO",cat:"ATO0049 / 82876 71694-2",priceLow:8,priceHigh:15,spotIt:"2005 ATO Records. Avoid content-protected versions (82876 71067-2). Look for standard jewel case.",detail:"Recorded at Allaire Studios and Woodland Sound, Atlanta. More focused and studio-crafted than It Still Moves — the band's production leap. Original ATO pressing is the reference. Avoid copy-protected versions.",apId:null},
+  {id:'s127',genre:"Rock/Pop",sortKey:"Fountains of Wayne",artist:"Fountains of Wayne",album:"Fountains of Wayne",label:"Atlantic / TAG",cat:"A2 92725",priceLow:5,priceHigh:12,spotIt:"1996 original. TAG/Atlantic label. 'A2 92725' on disc. Mastered by Greg Calbi at Masterdisk NYC. No remaster sticker.",detail:"Debut album recorded Jan–Apr 1996 at The Place NYC, mixed at Greene Street Recording. Mastered by Greg Calbi at Masterdisk — pre-loudness-war, clean and punchy. Original US or early European pressings are the ones to find.",apId:null},
+  {id:'s128',genre:"Rock/Pop",sortKey:"Fountains of Wayne",artist:"Fountains of Wayne",album:"Utopia Parkway",label:"Atlantic",cat:"83177-2",priceLow:5,priceHigh:12,spotIt:"1999 original Atlantic. WEA Olyphant matrix (X7157). Mastered at Sony Studios NYC by Vladimir Meller. No remaster sticker.",detail:"Recorded at Stratosphere Sound and The Big House NYC, mixed at Q Division Boston. WEA Olyphant pressing, mastered at Sony Studios NYC. Pre-loudness-war. The better early pressing to look for has 'wea mfg. OLYPHANT X7157' in matrix.",apId:null},
+  {id:'s129',genre:"Rock/Pop",sortKey:"LaMontagne",artist:"Ray LaMontagne",album:"Trouble",label:"RCA / BMG",cat:"82876 63459-2",priceLow:6,priceHigh:14,spotIt:"2004 RCA/BMG digipak. Produced and recorded by Ethan Johns at Sunset Sound Hollywood. No remaster sticker.",detail:"Debut album produced and recorded by Ethan Johns at Sunset Sound Recorders, Hollywood. Same production chain as Gossip in the Grain — Ethan Johns handling all instruments, engineering and mixing. Compact and intimate. Same pedigree as your Gossip pressing.",apId:null},
+  {id:'s130',genre:"Rock/Pop",sortKey:"LaMontagne",artist:"Ray LaMontagne",album:"Till the Sun Turns Black",label:"RCA",cat:"82876 83328-2",priceLow:5,priceHigh:12,spotIt:"2006 RCA digipak. Produced by Ethan Johns at Allaire Studios Shokan NY. Mastered by Ted Jensen at Sterling Sound NYC. No remaster sticker.",detail:"Second album, produced by Ethan Johns at Allaire Studios in the Catskills. Mastered by Ted Jensen at Sterling Sound — a strong mastering chain. Discogs reviewer: 'One of the better sounding CDs I own that isn't specifically an audiophile release.' Same Ethan Johns production pedigree as Gossip in the Grain.",apId:null},
+  {id:'s131',genre:"Rock/Pop",sortKey:"Junip",artist:"Junip",album:"Fields",label:"City Slang",cat:"SLANG0680006",priceLow:6,priceHigh:14,spotIt:"2010 City Slang. SLANG747888 or SLANG0680006. Recorded and produced at Stampen studio, mixed at Don Pierre Studio, mastered at Svenska Grammofon Studion Stockholm.",detail:"Debut full-length from José González's trio. Recorded and mastered entirely in Sweden on an indie budget. Mastered by Don Alstherberg and Hans Olsson at Svenska Grammofon Studion — a boutique facility with a good reputation for acoustic music. Warm and dynamic for the genre. Worth grabbing cheap.",apId:null},
+  {id:'s132',genre:"Rock/Pop",sortKey:"Simpson",artist:"Sturgill Simpson",album:"High Top Mountain",label:"High Top Mountain Records",cat:"HTM-478704",priceLow:6,priceHigh:14,spotIt:"2013 original. High Top Mountain Records digisleeve. Produced by Dave Cobb. Mastered by Richard Dodd. Engineered by Vance Powell at Sputnik Sound Nashville.",detail:"Self-funded debut produced by Dave Cobb, engineered by Vance Powell at Sputnik Sound, mastered by Richard Dodd. The same production chain (Cobb/Powell) as Metamodern Sounds. Recorded at Falling Rock and Hillbilly Central in Nashville. Dynamic, punchy, no loudness war issues. A strong complement to your Metamodern copy.",apId:null},
+  {id:'s133',genre:"Rock/Pop",sortKey:"Musgraves",artist:"Kacey Musgraves",album:"Same Trailer Different Park",label:"Mercury Nashville",cat:"B0018029-02",priceLow:5,priceHigh:12,spotIt:"2013 Mercury Nashville. Jewel case. Mastered at Georgetown Masters Nashville by Andrew Mendelson. No remaster sticker.",detail:"Debut album recorded at Ben's Studio Nashville, mixed at The Racket and Maverick Recording, mastered at Georgetown Masters by Andrew Mendelson. Pre-loudness-war era Nashville production. Note: mastering is considered adequate but not exceptional — grab it if cheap but not worth hunting specifically.",apId:null},
+  {id:'s134',genre:"Rock/Pop",sortKey:"Big Thief",artist:"Big Thief",album:"Capacity",label:"Saddle Creek",cat:"SC-263",priceLow:8,priceHigh:16,spotIt:"2017 Saddle Creek. Produced by Andrew Sarlo. Recorded at Outlier Inn Recording, Woodridge NY and Brooklyn studios.",detail:"Recorded in a farmhouse the band was house-sitting, produced by Andrew Sarlo. Saddle Creek indie release — no major label loudness war pressure. Intimate, guitar-forward recording. Worth grabbing if you find it cheap.",apId:null},
+  {id:'s135',genre:"Rock/Pop",sortKey:"Big Thief",artist:"Big Thief",album:"U.F.O.F.",label:"4AD",cat:"4AD0129CD",priceLow:8,priceHigh:16,spotIt:"2019 4AD. Produced by Andrew Sarlo. Recorded at Bear Creek Studio, Woodinville WA by Dom Monks.",detail:"Recorded at Bear Creek Studio in rural western Washington by engineer Dom Monks — a studio with a strong reputation for natural acoustic recording. Produced by Andrew Sarlo. 4AD indie mastering chain, no loudness war issues. The more ethereal of the two 2019 Big Thief releases.",apId:null},
+  // ── U2 STANDARD PRESSINGS ──
+  {id:'s136',genre:"Rock/Pop",sortKey:"U2",artist:"U2",album:"Boy",label:"Island",cat:"ILPS 9646 / W.Germany target",priceLow:8,priceHigh:20,spotIt:"West German PolyGram target pressing — purple/green target design. 'Made in West Germany by PolyGram' on disc. Mastered at The Sound Clinic. Avoid 2008 Universal remaster (compressed, louder).",detail:"The West German PolyGram target pressing is the consensus best standard CD version — same Hannover plant, flat analog transfer. Produced by Steve Lillywhite at Windmill Lane Dublin. Early Irish post-punk at its most raw. Avoid all 2008 Island/Universal remasters.",apId:null},
+  {id:'s137',genre:"Rock/Pop",sortKey:"U2",artist:"U2",album:"October",label:"Island",cat:"ILPS 9680 / W.Germany target",priceLow:8,priceHigh:20,spotIt:"West German PolyGram target pressing. 'Made in West Germany by PolyGram' on disc. Avoid 2008 Universal remaster.",detail:"West German PolyGram target is the best standard version. Produced by Steve Lillywhite at Windmill Lane Dublin. The weakest U2 album but the early W.Germany pressing is still the right one to find. Avoid 2008 remasters.",apId:null},
+  {id:'s138',genre:"Rock/Pop",sortKey:"U2",artist:"U2",album:"War",label:"Island",cat:"90067-2 / W.Germany target",priceLow:8,priceHigh:20,spotIt:"West German PolyGram target pressing — purple/green target design, outer mirror band on earliest versions. 'Made in West Germany by PolyGram' on disc. No barcode on earliest. Avoid 2008 Universal remaster.",detail:"The West German PolyGram target is the clear winner — Discogs comments note 'sounds really fucking great, no compression, this is how all CDs should sound.' Produced by Steve Lillywhite at Windmill Lane. The band's commercial breakthrough. Earliest version has no barcode and outer mirror band — prefer that over later barcoded version.",apId:null},
+  {id:'s139',genre:"Rock/Pop",sortKey:"U2",artist:"U2",album:"The Unforgettable Fire",label:"Island",cat:"90231-2 / W.Germany target",priceLow:8,priceHigh:18,spotIt:"West German PolyGram target or early Island pressing. 'Made in West Germany by PolyGram' on disc. Avoid 2009 Universal 25th anniversary remaster.",detail:"First collaboration with Brian Eno and Daniel Lanois at Slane Castle — the sonic leap from the Lillywhite era. West German PolyGram target pressing preferred. Avoid the 2009 25th anniversary remaster which applied compression. Original is open and atmospheric.",apId:null},
+  {id:'s140',genre:"Rock/Pop",sortKey:"U2",artist:"U2",album:"The Joshua Tree",label:"Island",cat:"90581-2",priceLow:6,priceHigh:15,spotIt:"Original 1987 Island pressing. 'Island Records' label, no 'remastered' text. Avoid 2007 20th anniversary and 2017 30th anniversary remasters — both more compressed than original.",detail:"First U2 album released simultaneously on CD, cassette and LP — the original Island CD is dynamic and well-mastered. Produced by Brian Eno and Daniel Lanois. The 2007 remaster was better received than the 2008 early-album remasters but the original is still the preferred version. Early Island pressing with no remaster text is the one to find.",apId:null},
+  {id:'s141',genre:"Rock/Pop",sortKey:"U2",artist:"U2",album:"Rattle and Hum",label:"Island",cat:"91003-2",priceLow:5,priceHigh:12,spotIt:"Original 1988 Island pressing. 'Island Records' label. No remaster text — Rattle and Hum has NEVER had an official physical remaster release due to Paramount rights issues. Any copy is effectively the original master.",detail:"The only U2 album from this era never officially remastered on CD — Paramount film rights have blocked it. Original Island 91003-2 is the only version that exists in standard format. Live and studio hybrid. Any copy you find is using the original master.",apId:null},
+  {id:'s142',genre:"Rock/Pop",sortKey:"U2",artist:"U2",album:"Achtung Baby",label:"Island",cat:"510 347-2",priceLow:6,priceHigh:15,spotIt:"Original 1991 Island pressing. 'Island Records' label. No '20th Anniversary' or remaster text. Avoid 2011 20th anniversary remaster and 2018/2021 remasters — all more compressed.",detail:"Recorded in Berlin and Dublin with Eno/Lanois — the band's creative reinvention. Original 1991 Island pressing is the preferred version. The 2011 20th anniversary remaster applied compression; original is more dynamic and open. Produced by Daniel Lanois and Brian Eno, engineered by Flood.",apId:null},
+  // ── ALICE COLTRANE ──
+  {id:'s143',genre:"Jazz",sortKey:"Coltrane A",artist:"Alice Coltrane",album:"Journey in Satchidananda",label:"Impulse!",cat:"IMPD-228",priceLow:10,priceHigh:18,spotIt:"1997 Impulse! remaster (IMPD-228). Best standard CD version. Tri-fold digipak. Avoid later GEO and URP represses.",detail:"Recorded November 1970 at the Coltrane home studio, Dix Hills NY. Pharoah Sanders, Cecil McBee, Rashied Ali, Charlie Haden. The 1997 MCA/Impulse remaster (IMPD-228) is the best standard CD — audiophile-quality remastering, tri-fold digipak with original liner notes. Avoid the later GEO-stamped represses (more common, slightly inferior). Superior format: Verve Acoustic Sounds 180g LP (2023, from original analog tapes, QRP pressing) — the vinyl reference.",apId:null},
+  {id:'s144',genre:"Jazz",sortKey:"Coltrane A",artist:"Alice Coltrane",album:"Ptah, the El Daoud",label:"Impulse!",cat:"IMPD-174",priceLow:10,priceHigh:18,spotIt:"1994 MCA/Impulse remaster (IMPD-174). Best standard CD. Avoid budget grey-label reissues.",detail:"Recorded January 1970 at the Coltrane home studio, Dix Hills NY. Joe Henderson and Pharoah Sanders both on tenor and alto flute — their only album together. Ron Carter on bass, Ben Riley on drums. More accessible than Journey in Satchidananda. Early MCA/Impulse CD remaster is the reference — avoid the grey-label budget reissues which London Jazz Collector notes are muddy and boomy vs the original. Superior format: Verve By Request 180g LP (2022, Third Man Pressing, Detroit).",apId:null},
+  {id:'s145',genre:"Jazz",sortKey:"Coltrane A",artist:"Alice Coltrane",album:"A Monastic Trio",label:"Impulse!",cat:"IMPD-168",priceLow:10,priceHigh:20,spotIt:"1994 MCA/Impulse remaster. Best standard CD. Her debut — more scarce than later titles.",detail:"Her debut, recorded January and June 1968 at the Coltrane home studio, Dix Hills NY. More rooted in post-bop than the later Impulse records — Ron Carter on bass, Rashied Ali on drums, Pharoah Sanders on bass clarinet on one track. Quieter and more chamber-like than Journey in Satchidananda. The 1994 MCA/Impulse CD remaster is the reference. Harder to find than the later albums.",apId:null},
+  // ── DONNIE HATHAWAY ──
+  {id:'s146',genre:"Soul/R&B",sortKey:"Hathaway",artist:"Donny Hathaway",album:"Live",label:"Atlantic",cat:"SD 7911-2",priceLow:6,priceHigh:14,spotIt:"Original Atlantic CD. 'Atlantic' label, SD 7911-2. No remaster text. Recorded 1971 at The Troubadour Hollywood and The Bitter End NYC.",detail:"Recorded August and October 1971 — Troubadour Hollywood (side one, produced by Arif Mardin) and Bitter End NYC (side two, produced by Wexler and Mardin). Willie Weeks on bass, Cornell Dupree on guitar. One of the great live soul recordings. The plain Atlantic CD is described as excellent — warm, open, captures the intimate club atmosphere. Rhino reissue also considered strong. Superior format: original Atlantic vinyl (PR Presswell pressing is the reference).",apId:null},
+  // ── RICHIE HAVENS ──
+  {id:'s147',genre:"Rock/Pop",sortKey:"Havens",artist:"Richie Havens",album:"Mixed Bag",label:"Verve Forecast",cat:"835 210-2",priceLow:6,priceHigh:14,spotIt:"Verve/PolyGram CD (835 210-2). His definitive studio album. Open-E guitar tuning, thumb-chorded strumming. Here Comes the Sun, Just Like a Woman, Eleanor Rigby, Handsome Johnny.",detail:"Recorded July and September 1966. Produced by John Court. Havens' definitive studio document — his unusual open-E tuning and thumb-strummed acoustic are perfectly captured. Includes Here Comes the Sun, Just Like a Woman, Eleanor Rigby, Handsome Johnny. The Verve/PolyGram CD (835 210-2) is the best available standard version. No audiophile CD treatment exists. Note: a 2004 double CD Flyin' Bird: The Verve Forecast Years combines Mixed Bag with Something Else Again — good value if you want both.",apId:null},
+  {id:'s148',genre:"Rock/Pop",sortKey:"Havens",artist:"Richie Havens",album:"Woodstock (Various)",label:"Cotillion / Atlantic",cat:"SD 3-500 / 82306-2",priceLow:8,priceHigh:18,spotIt:"Cotillion/Atlantic 3-CD Woodstock soundtrack. 'Cotillion' or 'Atlantic' label. Havens opens the festival — Freedom (improvised), Handsome Johnny, Here Comes the Sun. No standalone Havens Woodstock CD exists.",detail:"Havens' Woodstock performance is only available as part of the festival compilations — there is no standalone CD of his set. The Cotillion/Atlantic 3-CD set (SD 3-500 original, later Atlantic 82306-2) is the essential document. Havens opened the festival and improvised Freedom on the spot when he ran out of songs — one of the great live moments in rock history. The Atlantic CD reissue is the practical version to find.",apId:null},
+];
+
+const BOXSETS = [
+
+  {id:'b3',genre:"Rock/Pop",sortKey:"Dylan",artist:"Bob Dylan",album:"The Original Mono Recordings",pressing:"Columbia/Legacy 9-CD mono box, 2010. Steve Berkowitz/Mark Wilder.",cat:"88697761042",priceLow:60,priceHigh:120,detail:"Definitive way to hear early Dylan as originally mixed. Essential companion to stereo copies."},
+  {id:'b4',genre:"Rock/Pop",sortKey:"Led Zeppelin",artist:"Led Zeppelin",album:"Complete Studio Recordings",pressing:"Atlantic 10-CD box, 1993. Page/Marino remasters from original tapes.",cat:"82526-2",priceLow:60,priceHigh:120,detail:"Page-approved remasters. Individual early Atlantic pressings with 'PR' matrix at $8-15 each are a solid alternative."},
+  {id:'b5',genre:"Jazz",sortKey:"Coltrane",artist:"John Coltrane",album:"The Classic Quartet -- Complete Impulse! Studio Recordings",pressing:"Impulse! 8-CD box, 1998.",cat:"IMPD8-280",priceLow:80,priceHigh:140,detail:"The definitive Coltrane Impulse! collection. 8 discs covering 1961-1965."},
+  {id:'b6',genre:"Jazz",sortKey:"Davis",artist:"Miles Davis",album:"The Complete In a Silent Way Sessions",pressing:"Columbia/Legacy 3-CD box, 2001. Mark Wilder remastering.",cat:"C3K 65362",priceLow:30,priceHigh:55,detail:"Essential expanded view of the In a Silent Way sessions."},
+  {id:'b7',genre:"Jazz",sortKey:"Davis",artist:"Miles Davis",album:"The Complete Bitches Brew Sessions",pressing:"Columbia/Legacy 4-CD box, 1998.",cat:"C4K 65570",priceLow:35,priceHigh:65,detail:"Comprehensive look at the Bitches Brew sessions."},
+  {id:'b11',genre:"Jazz",sortKey:"Jarrett",artist:"Keith Jarrett",album:"At the Blue Note (Complete 6-CD Set)",pressing:"ECM 1994 -- 6 CDs documenting three nights, two sets per night. Jarrett/Peacock/DeJohnette trio.",cat:"ECM 1547/48/49/50/51/52",priceLow:40,priceHigh:80,detail:"ECM production is essentially audiophile by default -- natural piano sound, excellent room ambience. Don't buy individual discs; hold out for the complete set."},
+    {id:'b8',genre:"Jazz",sortKey:"Evans",artist:"Bill Evans",album:"The Complete Riverside Recordings",pressing:"Riverside/OJC 12-CD box. Orrin Keepnews.",cat:"RCD-018-2",priceLow:120,priceHigh:200,detail:"Supersedes Village Vanguard 3-CD for completeness. 12 discs."},
+  {id:'b9',genre:"Jazz",sortKey:"Fitzgerald",artist:"Ella Fitzgerald",album:"The Complete Song Books (16-CD box)",pressing:"Verve 1994. Phil Schaap. Grammy Best Historical Recording 1995.",cat:"314 519 832-2",priceLow:120,priceHigh:200,detail:"Supersedes your Pure Ella and Best of the Song Books compilations."},
+  {id:'b10',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"The Complete Unreleased Recording Sessions June 1955",pressing:"Sony Classical 7-CD box + 180g LP + coffee table book.",cat:"88875105432",priceLow:80,priceHigh:130,detail:"Studio conversations throughout. Remarkable document of the 1955 Goldberg sessions."},
+];
+
+let gotState={}, hideGot={audiophile:false,standard:false,boxsets:false};
+let activeGenre={audiophile:'All',standard:'All',boxsets:'All'};
+let openRows=new Set(), openBoxes=new Set();
+
+function loadState(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');gotState=d.got||{};}catch(e){}}
+function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({got:gotState}));}catch(e){}}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function priceStr(lo,hi){return lo===hi?`$${lo}`:`$${lo}-${hi}`;}
+
+function switchTab(tab){
+  ['audiophile','standard','boxsets'].forEach(t=>{
+    document.getElementById(`tab-${t}`).style.display=t===tab?'':'none';
+    document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active',t===tab);
+  });
+}
+
+function toggleHideGot(tab){
+  hideGot[tab]=!hideGot[tab];
+  document.getElementById(`hide-got-${tab}`).classList.toggle('active',hideGot[tab]);
+  rerender(tab);
+}
+
+function setGenre(tab,genre){
+  activeGenre[tab]=genre;
+  document.querySelectorAll(`#genre-btns-${tab} .gbtn`).forEach(b=>b.classList.toggle('active',b.dataset.g===genre));
+  rerender(tab);
+}
+
+function rerender(tab){
+  if(tab==='audiophile')renderAudiophile();
+  else if(tab==='standard')renderStandard();
+  else renderBoxsets();
+}
+
+function buildGenreBtns(tab,data){
+  const present=[...new Set(data.map(e=>e.genre))];
+  const genres=['All',...GENRE_ORDER.filter(g=>present.includes(g))];
+  document.getElementById(`genre-btns-${tab}`).innerHTML=genres.map(g=>
+    `<button class="gbtn${activeGenre[tab]===g?' active':''}" data-g="${g}" onclick="setGenre('${tab}','${g}')">${g}</button>`
+  ).join('');
+}
+
+function toggleGot(id,e){
+  e.stopPropagation();
+  if(gotState[id])delete gotState[id];else gotState[id]=true;
+  saveState();
+  renderAudiophile();renderStandard();renderBoxsets();
+}
+
+function toggleRow(id){
+  if(openRows.has(id))openRows.delete(id);else openRows.add(id);
+  const d=document.getElementById(`detail-${id}`);
+  const ch=document.getElementById(`chev-${id}`);
+  if(d)d.classList.toggle('open',openRows.has(id));
+  if(ch)ch.classList.toggle('open',openRows.has(id));
+}
+
+function toggleBox(id){
+  if(openBoxes.has(id))openBoxes.delete(id);else openBoxes.add(id);
+  const el=document.getElementById(`box-${id}`);
+  if(el)el.classList.toggle('open',openBoxes.has(id));
+}
+
+function jumpToAP(apId){
+  switchTab('audiophile');
+  setTimeout(()=>{
+    const el=document.getElementById(`row-${apId}`);
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.outline='2px solid var(--gold)';setTimeout(()=>el.style.outline='',1500);}
+    openRows.add(apId);
+    const d=document.getElementById(`detail-${apId}`);
+    const ch=document.getElementById(`chev-${apId}`);
+    if(d)d.classList.add('open');
+    if(ch)ch.classList.add('open');
+  },80);
+}
+
+function sortedData(data){
+  return [...data].sort((a,b)=>{
+    const gi=GENRE_ORDER.indexOf(a.genre),gj=GENRE_ORDER.indexOf(b.genre);
+    if(gi!==gj)return gi-gj;
+    const sk=(a.sortKey||'').toLowerCase().localeCompare((b.sortKey||'').toLowerCase());
+    if(sk!==0)return sk;
+    return(a.album||'').toLowerCase().localeCompare((b.album||'').toLowerCase());
+  });
+}
+
+function tableRows(rows,isAP){
+  if(!rows.length)return `<tr><td colspan="9"><div class="empty">No matches.</div></td></tr>`;
+  const sorted=sortedData(rows);
+  let html='',lastGenre=null;
+  for(const e of sorted){
+    const got=!!gotState[e.id],open=openRows.has(e.id);
+    if(e.genre!==lastGenre){
+      html+=`<tr class="genre-row"><td colspan="9">${esc(e.genre)}</td></tr>`;
+      lastGenre=e.genre;
+    }
+    if(isAP){
+      html+=`
+      <tr class="main-row ${got?'got':''}" id="row-${e.id}" onclick="toggleRow('${e.id}')">
+        <td class="cell-expand"><span class="chevron ${open?'open':''}" id="chev-${e.id}">&#9658;</span></td>
+        <td class="cell-score"><span class="score score-${e.score}">${e.score}</span></td>
+        <td class="cell-artist">${esc(e.artist)}</td>
+        <td class="cell-album">${esc(e.album)}${e.gold?'<span class="gold-tag">GOLD</span>':''}</td>
+        <td class="cell-label">${esc(e.label)}</td>
+        <td class="cell-cat">${esc(e.cat)}</td>
+        <td class="cell-price">${priceStr(e.priceLow,e.priceHigh)}</td>
+        <td class="cell-tip">${esc(e.spotIt)}</td>
+        <td class="cell-got" onclick="event.stopPropagation()"><input type="checkbox" class="got-check" ${got?'checked':''} onchange="toggleGot('${e.id}',event)"></td>
+      </tr>
+      <tr class="detail-row"><td colspan="9"><div class="detail-inner ${open?'open':''}" id="detail-${e.id}">${esc(e.detail)}</div></td></tr>`;
+    } else {
+      const apBtn=e.apId
+        ?`<span class="ap-dot" onclick="event.stopPropagation();jumpToAP('${e.apId}')">AP &#8599;</span>`
+        :`<span style="color:var(--text-faint);font-size:11px;font-family:var(--mono)">-</span>`;
+      html+=`
+      <tr class="main-row ${got?'got':''}" id="row-${e.id}" onclick="toggleRow('${e.id}')">
+        <td class="cell-expand"><span class="chevron ${open?'open':''}" id="chev-${e.id}">&#9658;</span></td>
+        <td class="cell-artist">${esc(e.artist)}</td>
+        <td class="cell-album">${esc(e.album)}</td>
+        <td class="cell-label">${esc(e.label)}</td>
+        <td class="cell-cat">${esc(e.cat)}</td>
+        <td class="cell-price">${priceStr(e.priceLow,e.priceHigh)}</td>
+        <td class="cell-tip">${esc(e.spotIt)}</td>
+        <td class="cell-ap" onclick="event.stopPropagation()">${apBtn}</td>
+        <td class="cell-got" onclick="event.stopPropagation()"><input type="checkbox" class="got-check" ${got?'checked':''} onchange="toggleGot('${e.id}',event)"></td>
+      </tr>
+      <tr class="detail-row"><td colspan="9"><div class="detail-inner ${open?'open':''}" id="detail-${e.id}">${esc(e.detail)}</div></td></tr>`;
+    }
+  }
+  return html;
+}
+
+function renderAudiophile(){
+  const q=(document.getElementById('search-audiophile').value||'').toLowerCase();
+  const g=activeGenre.audiophile;
+  const rows=AUDIOPHILE.filter(e=>{
+    if(hideGot.audiophile&&gotState[e.id])return false;
+    if(g!=='All'&&e.genre!==g)return false;
+    if(!q)return true;
+    return[e.artist,e.album,e.label,e.cat,e.spotIt,e.detail].some(v=>(v||'').toLowerCase().includes(q));
+  });
+  document.getElementById('count-audiophile').textContent=AUDIOPHILE.filter(e=>!gotState[e.id]).length+' rem';
+  document.getElementById('badge-audiophile').textContent=`${rows.length} shown`;
+  buildGenreBtns('audiophile',AUDIOPHILE);
+  document.getElementById('tbody-audiophile').innerHTML=tableRows(rows,true);
+}
+
+function renderStandard(){
+  const q=(document.getElementById('search-standard').value||'').toLowerCase();
+  const g=activeGenre.standard;
+  const rows=STANDARD.filter(e=>{
+    if(hideGot.standard&&gotState[e.id])return false;
+    if(g!=='All'&&e.genre!==g)return false;
+    if(!q)return true;
+    return[e.artist,e.album,e.label,e.cat,e.spotIt,e.detail].some(v=>(v||'').toLowerCase().includes(q));
+  });
+  document.getElementById('count-standard').textContent=STANDARD.filter(e=>!gotState[e.id]).length+' rem';
+  document.getElementById('badge-standard').textContent=`${rows.length} shown`;
+  buildGenreBtns('standard',STANDARD);
+  document.getElementById('tbody-standard').innerHTML=tableRows(rows,false);
+}
+
+function renderBoxsets(){
+  const q=(document.getElementById('search-boxsets').value||'').toLowerCase();
+  const g=activeGenre.boxsets;
+  const items=BOXSETS.filter(e=>{
+    if(hideGot.boxsets&&gotState[e.id])return false;
+    if(g!=='All'&&e.genre!==g)return false;
+    if(!q)return true;
+    return[e.artist,e.album,e.pressing,e.cat].some(v=>(v||'').toLowerCase().includes(q));
+  });
+  document.getElementById('count-boxsets').textContent=BOXSETS.filter(e=>!gotState[e.id]).length+' rem';
+  document.getElementById('badge-boxsets').textContent=`${items.length} shown`;
+  buildGenreBtns('boxsets',BOXSETS);
+  const sorted=sortedData(items);
+  const grid=document.getElementById('box-grid');
+  if(!sorted.length){grid.innerHTML=`<div class="empty">No matches.</div>`;return;}
+  grid.innerHTML=sorted.map(e=>{
+    const got=!!gotState[e.id],open=openBoxes.has(e.id);
+    return`<div class="box-card ${got?'got':''} ${open?'open':''}" id="box-${e.id}" onclick="toggleBox('${e.id}')">
+      <input type="checkbox" class="got-check box-got" ${got?'checked':''} onclick="event.stopPropagation()" onchange="toggleGot('${e.id}',event)">
+      <div class="box-artist">${esc(e.genre)} &middot; ${esc(e.artist)}</div>
+      <div class="box-album">${esc(e.album)}</div>
+      <div class="box-cat">${esc(e.cat)}</div>
+      <div class="box-price">${priceStr(e.priceLow,e.priceHigh)}</div>
+      <div class="box-detail">${esc(e.pressing)}<br><br>${esc(e.detail)}</div>
+    </div>`;
+  }).join('');
+}
+
+loadState();
+renderAudiophile();
+renderStandard();
+renderBoxsets();
+</script>
+</body>
+</html>
