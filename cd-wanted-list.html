@@ -93,6 +93,7 @@
   <button class="tab active" data-tab="audiophile" onclick="switchTab('audiophile')">Audiophile <span class="count" id="count-audiophile"></span></button>
   <button class="tab" data-tab="standard" onclick="switchTab('standard')">Standard <span class="count" id="count-standard"></span></button>
   <button class="tab" data-tab="boxsets" onclick="switchTab('boxsets')">Box Sets <span class="count" id="count-boxsets"></span></button>
+  <button class="tab" data-tab="classical" onclick="switchTab('classical')">Classical Guitar <span class="count" id="count-classical"></span></button>
 </div>
 <div id="tab-audiophile">
   <div class="score-legend">
@@ -148,6 +149,23 @@
     <div class="box-grid" id="box-grid"></div>
   </div>
 </div>
+<div id="tab-classical" style="display:none">
+  <div class="toolbar">
+    <input type="text" id="search-classical" placeholder="Search..." oninput="renderClassical()">
+    <button class="got-toggle" id="hide-got-classical" onclick="toggleHideGot('classical')">Hide got</button>
+    <span class="badge" id="badge-classical"></span>
+  </div>
+  <div class="tab-content">
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th class="cell-expand"></th><th class="cell-artist">Artist</th><th class="cell-album">Album</th>
+        <th class="cell-label">Label</th><th class="cell-cat">Cat #</th>
+        <th class="cell-price">Price</th><th class="cell-tip">Quick tip</th><th class="cell-got">Got</th>
+      </tr></thead>
+      <tbody id="tbody-classical"></tbody>
+    </table></div>
+  </div>
+</div>
 <script>
 const STORAGE_KEY = 'cd-wanted-v2';
 const GENRE_ORDER = ['Rock/Pop','Jazz','Classical','Country','Soul/R&B'];
@@ -192,7 +210,7 @@ const AUDIOPHILE = [
   {id:'a18',score:5,gold:false,genre:"Jazz",sortKey:"Evans",artist:"Bill Evans Trio",album:"Sunday at the Village Vanguard",label:"Analogue Productions",cat:"CAPJ 9376 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Hybrid SACD.",detail:"Keepnews Riverside transfer basis. OJC OJCCD-140-2 at $6-12 is the affordable alternative."},
   {id:'a47',score:5,gold:true,genre:"Jazz",sortKey:"Garland",artist:"Judy Garland",album:"Judy at Carnegie Hall",label:"DCC",cat:"GZS-1034",priceLow:35,priceHigh:65,spotIt:"24kt gold. 'GZS-1034' matrix. 'MFD BY JVC' inner ring. 1961 live recording.",detail:"1961 live recording transformed by Hoffman mastering. Early Capitol STBO 1569-2 at $8-15 is the standard alt."},
   {id:'a27',score:5,gold:false,genre:"Jazz",sortKey:"Getz Gilberto",artist:"Stan Getz / Joao Gilberto",album:"Getz/Gilberto",label:"Analogue Productions",cat:"CAPV 8545 SA",priceLow:20,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Hybrid SACD.",detail:"Early Verve 810 048-2 W.Germany at $6-14 is a solid standard alt."},
-  {id:'a26',score:5,gold:true,genre:"Jazz",sortKey:"Montgomery",artist:"Wes Montgomery",album:"Full House",label:"DCC",cat:"GZS-1109",priceLow:40,priceHigh:65,spotIt:"24kt gold. 'GZS-1109' matrix. 'MFD BY JVC' inner ring.",detail:"Steve Hoffman mastering. OJC OJCCD-106-2 at $6-14 is the affordable alternative."},
+
   {id:'a63',score:5,gold:false,genre:"Jazz",sortKey:"Quebec",artist:"Ike Quebec",album:"Blue & Sentimental",label:"Analogue Productions",cat:"CBNJ 84098 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. 'CBNJ 84098 SA' on disc. Hybrid SACD.",detail:"Forum consensus best version. Warm, rich, analogue-sounding. Kevin Gray mastering. Grant Green on guitar, Paul Chambers, Philly Joe Jones. Early Blue Note CDP 7 84123 2 at $8-15 is the standard alt."},
     {id:'a17',score:5,gold:false,genre:"Jazz",sortKey:"Rollins",artist:"Sonny Rollins",album:"Saxophone Colossus",label:"Analogue Productions",cat:"CAPJ 7079 SA",priceLow:25,priceHigh:35,spotIt:"'Analogue Productions' prominently printed. Hybrid SACD.",detail:"Clear upgrade. OJC OJCCD-291-2 is the affordable alternative at $6-12."},
   {id:'a50',score:4,gold:true,genre:"Classical",sortKey:"Sinatra",artist:"Frank Sinatra",album:"In the Wee Small Hours",label:"DCC",cat:"GZS-1044",priceLow:40,priceHigh:75,spotIt:"24kt gold. 'GZS-1044' matrix. 'MFD BY JVC' inner ring. Avoid 1998 Capitol 72434 series.",detail:"MFSL UDCD 791 is an equivalent alternative. Both forum top 5. Early Capitol CDP 7 96826 2 (pre-1998) at $6-14 is the standard alt."},
@@ -219,7 +237,7 @@ const STANDARD = [
   {id:'s51',genre:"Rock/Pop",sortKey:"Lofgren",artist:"Nils Lofgren",album:"Acoustic Live",label:"Rykodisc",cat:"740155093426",priceLow:8,priceHigh:12,spotIt:"Bill Wolf mastering. Original CD. Genuinely good at this price.",detail:"AP SACD CAPP-090-SA is the audiophile target, but original is genuinely good.",apId:"a51"},
   {id:'s59',genre:"Rock/Pop",sortKey:"Metheny",artist:"Pat Metheny Group",album:"Still Life (Talking)",label:"Geffen",cat:"9 24145-2",priceLow:6,priceHigh:14,spotIt:"Early Geffen. Pre-loudness-war. Lush natural sound.",detail:"No audiophile pressing exists. Early Geffen is the reference.",apId:null},
   {id:'s60',genre:"Rock/Pop",sortKey:"Metheny",artist:"Pat Metheny Group",album:"Letter from Home",label:"Geffen",cat:"9 24245-2",priceLow:6,priceHigh:14,spotIt:"Early Geffen. Pre-loudness-war. Companion to Still Life.",detail:"No audiophile pressing exists. Early Geffen is the reference.",apId:null},
-  {id:'s4',genre:"Rock/Pop",sortKey:"Mitchell",artist:"Joni Mitchell",album:"Blue",label:"Reprise/Asylum",cat:"MS 2038-2",priceLow:5,priceHigh:12,spotIt:"Early pressing. No remaster sticker. Japan WPCR-14096 is the best standard pressing.",detail:"You own Japanese WPCR-14096 which is solid. DCC GZS-1132 is the audiophile target.",apId:"a20"},
+
   {id:'s32',genre:"Rock/Pop",sortKey:"Morrison",artist:"Van Morrison",album:"Astral Weeks",label:"Warner Bros.",cat:"1839-2",priceLow:5,priceHigh:12,spotIt:"Early Warner Bros. Pre-2015 remaster. No 'Remastered' sticker.",detail:"AP SACD CAPP 200 SA is the audiophile target. This is the budget fallback.",apId:"a28"},
   {id:'s33',genre:"Rock/Pop",sortKey:"Morrison",artist:"Van Morrison",album:"Moondance",label:"Warner Bros.",cat:"3103-2",priceLow:5,priceHigh:12,spotIt:"Early Warner Bros. Pre-loudness-war. No remaster sticker.",detail:"Pre-loudness-war transfer. No audiophile pressing exists for this title.",apId:null},
   {id:'s15',genre:"Rock/Pop",sortKey:"Pink Floyd",artist:"Pink Floyd",album:"The Dark Side of the Moon",label:"EMI Harvest",cat:"CDP 7 46001 2",priceLow:8,priceHigh:18,spotIt:"'Made in W.Germany' inner ring. EMI Harvest label. Original digital transfer.",detail:"W.Germany pressing is the best standard version. MFSL UDCD 517 gold is the audiophile target.",apId:"a19"},
@@ -255,7 +273,7 @@ const STANDARD = [
   {id:'s95',genre:"Jazz",sortKey:"Quebec",artist:"Ike Quebec",album:"Blue & Sentimental",label:"Blue Note",cat:"CDP 7 84123 2",priceLow:8,priceHigh:15,spotIt:"Early Blue Note. 'RVG' stamp inside disc. Grant Green on guitar, Paul Chambers, Philly Joe Jones.",detail:"Smoky, late-night masterpiece. RVG recording. AP SACD CBNJ 84098 SA is the audiophile target.",apId:"a63"},
   {id:'s96',genre:"Jazz",sortKey:"Webster",artist:"Ben Webster",album:"Soulville",label:"Verve",cat:"833 551-2 W.Germany",priceLow:6,priceHigh:14,spotIt:"Early Verve. 'Made in W.Germany by Polygram' inner ring. Webster's most intimate recording.",detail:"Webster's big warm tenor at its most intimate. One of the great late-night records on any instrument. W.Germany Polygram pressing preferred.",apId:null},
     {id:'s62',genre:"Jazz",sortKey:"Metheny Haden",artist:"Pat Metheny / Charlie Haden",album:"Beyond the Missouri Sky",label:"Verve",cat:"314 537 130-2",priceLow:8,priceHigh:15,spotIt:"Verve 1997. Jan Erik Kongshaug at Rainbow Studio Oslo. Original is audiophile-grade.",detail:"Original recording quality is audiophile-grade. Original Verve is the reference -- no specialist pressing needed.",apId:null},
-  {id:'s27',genre:"Jazz",sortKey:"Montgomery",artist:"Wes Montgomery",album:"Full House",label:"OJC",cat:"OJCCD-106-2",priceLow:6,priceHigh:14,spotIt:"OJC label. Keepnews Riverside transfer. Affordable and honest.",detail:"DCC GZS-1109 Hoffman gold is the audiophile target.",apId:"a26"},
+
   {id:'s20',genre:"Jazz",sortKey:"Rollins",artist:"Sonny Rollins",album:"Saxophone Colossus",label:"OJC",cat:"OJCCD-291-2",priceLow:6,priceHigh:12,spotIt:"OJC label. Keepnews Prestige transfer. Honest and cheap.",detail:"AP SACD CAPJ 7079 SA is the audiophile target.",apId:"a17"},
   {id:'s64',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"The French Suites BWV 812-817",label:"Sony Classical",cat:"SK 37461",priceLow:6,priceHigh:12,spotIt:"Early Sony SK pressing. Single disc. Recorded 1971-1973.",detail:"No audiophile pressing exists. Early Sony SK pressing is the reference.",apId:null},
   {id:'s65',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"The Partitas BWV 825-830",label:"Sony Classical",cat:"SM2K 52597",priceLow:8,priceHigh:15,spotIt:"Early Sony SM2K pressing. 2-CD. Partita No. 6 in E minor is extraordinary.",detail:"No audiophile pressing exists. Early Sony SK pressing is the reference.",apId:null},
@@ -325,19 +343,26 @@ const BOXSETS = [
     {id:'b8',genre:"Jazz",sortKey:"Evans",artist:"Bill Evans",album:"The Complete Riverside Recordings",pressing:"Riverside/OJC 12-CD box. Orrin Keepnews.",cat:"RCD-018-2",priceLow:120,priceHigh:200,detail:"Supersedes Village Vanguard 3-CD for completeness. 12 discs."},
   {id:'b9',genre:"Jazz",sortKey:"Fitzgerald",artist:"Ella Fitzgerald",album:"The Complete Song Books (16-CD box)",pressing:"Verve 1994. Phil Schaap. Grammy Best Historical Recording 1995.",cat:"314 519 832-2",priceLow:120,priceHigh:200,detail:"Supersedes your Pure Ella and Best of the Song Books compilations."},
   {id:'b10',genre:"Classical",sortKey:"Gould",artist:"Glenn Gould",album:"The Complete Unreleased Recording Sessions June 1955",pressing:"Sony Classical 7-CD box + 180g LP + coffee table book.",cat:"88875105432",priceLow:80,priceHigh:130,detail:"Studio conversations throughout. Remarkable document of the 1955 Goldberg sessions."},
+  {id:'b12',genre:"Classical",sortKey:"Mercury LP1",artist:"Various",album:"Mercury Living Presence: The Collector's Edition Vol. 1",pressing:"Decca/Mercury 2011. 51 CDs. Wilma Cozart Fine remasters from original tapes. Each CD in individual sleeve with original LP art. 64-page booklet.",cat:"478 2602",priceLow:60,priceHigh:120,detail:"Transfers supervised by Mercury's original producer Wilma Cozart Fine using the original 3-track tapes. Three-microphone recording technique — widely regarded as the most naturally realistic orchestral recordings of the stereo era. Highlights: Dorati/Minneapolis Symphony (Mussorgsky/Ravel Pictures; Tchaikovsky 1812), Starker Bach Cello Suites, Szeryng. Preferred over the RCA Living Stereo Sony boxes which have documented mid-bass coloration. Buy Vol 1 first; Vol 2 and 3 if you want comprehensive coverage."},
+  {id:'b13',genre:"Classical",sortKey:"Mercury LP2",artist:"Various",album:"Mercury Living Presence: The Collector's Edition Vol. 2",pressing:"Decca/Mercury 2013. 55 CDs. Wilma Cozart Fine remasters. 182-page illustrated booklet.",cat:"478 5092",priceLow:60,priceHigh:120,detail:"Sequel to Vol. 1. Includes Stravinsky Rite of Spring (1953 mono, Dorati) — one of the great mono recordings. Howard Hanson symphonies, Fennell/Eastman Wind Ensemble, Paul Paray/Detroit Symphony French repertoire. Same authoritative Wilma Fine transfer standard as Vol. 1."},
+  {id:'b14',genre:"Classical",sortKey:"Mercury LP3",artist:"Various",album:"Mercury Living Presence: The Collector's Edition Vol. 3",pressing:"Decca/Mercury 2015. 53 CDs. Completes the catalog. 10 titles never previously on CD.",cat:"478 7896",priceLow:60,priceHigh:120,detail:"Completes the trilogy — together with Vols. 1 and 2 covers nearly the entire Mercury Living Presence catalog. Includes 10 albums never previously released on CD: Respighi Church Windows/Roman Festivals (mono), Copland Symphony No. 3 (mono), Ginastera, Beethoven Eroica, Fennell conducting Victor Herbert. Detailed booklet documents microphones, tapes, dates, locations for every session."},
 ];
 
-let gotState={}, hideGot={audiophile:false,standard:false,boxsets:false};
-let activeGenre={audiophile:'All',standard:'All',boxsets:'All'};
-let openRows=new Set(), openBoxes=new Set();
+const CLASSICAL = [
+  {id:'cg1',sortKey:"Bream",artist:"Julian Bream",album:"The Complete RCA Album Collection",label:"Sony Classical",cat:"B00BCCEBRI",priceLow:80,priceHigh:150,spotIt:"40-CD box. Each CD in vinyl-replica sleeve with original LP art. 2 DVDs included.",detail:"The definitive Bream document — 40 original LPs spanning 1960–1991. Lute, Spanish guitar, Baroque, contemporary commissions, Rodrigo concertos, Dowland, Bach. No other guitarist has comparable breadth. Best single investment in the repertoire. If box unavailable, best standalone RCA Gold Seal titles: 20th Century Guitar, Baroque Guitar, Music of Spain volumes at $5–12 each."},
+  {id:'cg2',sortKey:"Bream Williams",artist:"Julian Bream / John Williams",album:"Together",label:"RCA Gold Seal",cat:"09026-61450-2",priceLow:6,priceHigh:10,spotIt:"RCA Gold Seal. Two-guitarist duet recital. Around $6–10 used.",detail:"Guitar duets — Lawes, Carulli, Sor, Albéniz. One of the most charming recordings in the guitar catalogue. A natural and unforced listening experience."},
+  {id:'cg3',sortKey:"Russell David",artist:"David Russell",album:"Aire Latino",label:"Telarc",cat:"CD-80588",priceLow:8,priceHigh:15,spotIt:"'Telarc' label. '20 BIT CD' on front. Grammy winner 2005. Reference-grade recording.",detail:"Grammy winner 2005 (Best Instrumental Soloist). Telarc's reference-grade recording chain: 20-bit ADC, custom UltraAnalog converter engineered by Dr. Thomas Stockham, Apogee Super CD encoding. Latin American repertoire — Barrios, Lauro, Piazzolla. Russell's tone is exceptional and Telarc captures it with realistic intimacy. Widely cited as a system-testing reference disc."},
+  {id:'cg4',sortKey:"Russell David",artist:"David Russell",album:"Air on a G String",label:"Telarc",cat:"CD-80693",priceLow:8,priceHigh:15,spotIt:"'Telarc' label. Same 20-bit recording chain as Aire Latino.",detail:"Bach, Weiss, Couperin transcriptions. Same Telarc recording pedigree as Aire Latino. Gramophone praised his fastidious technique and historically informed approach. Audiophile Audition noted rich and clear sonics."},
+  {id:'cg5',sortKey:"Williams John Bach",artist:"John Williams",album:"Four Lute Suites of J.S. Bach",label:"CBS Masterworks",cat:"MK 42204",priceLow:6,priceHigh:10,spotIt:"CBS Masterworks. 'MK 42204'. Around $6–10 used.",detail:"Consistently cited as among the finest Bach on guitar ever recorded. Clean, precise, musical — Williams at his most authoritative."},
+  {id:'cg6',sortKey:"Williams John Barrios",artist:"John Williams",album:"From the Jungles of Paraguay: Plays Barrios",label:"Sony Classical",cat:"SK 66901",priceLow:6,priceHigh:12,spotIt:"Sony Classical. 'SK 66901'. Around $6–12 used.",detail:"Williams at his peak, devoted entirely to Agustín Barrios-Mangore — the most underrated composer in the guitar repertoire. La Catedral, Una Limosna por el Amor de Dios, Vals No. 4. Immaculately recorded. One of the best-sounding guitar CDs on the Sony/CBS label."},
+  {id:'cg7',sortKey:"Williams John Rodrigo",artist:"John Williams",album:"Rodrigo: Concierto de Aranjuez / Fantasia para un Gentilhombre",label:"Sony",cat:"SK 48480",priceLow:8,priceHigh:12,spotIt:"Sony Classical. 'SK 48480'. With Marriner/Academy of St Martin in the Fields.",detail:"Definitive Williams Rodrigo recording. The Adagio movement is one of the great tests of a system's midrange — on the Sonus Faber Concertinos it will be spectacular."},
+];
 
-function loadState(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');gotState=d.got||{};}catch(e){}}
-function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({got:gotState}));}catch(e){}}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function priceStr(lo,hi){return lo===hi?`$${lo}`:`$${lo}-${hi}`;}
+let hideGot={audiophile:false,standard:false,boxsets:false,classical:false};
+let activeGenre={audiophile:'All',standard:'All',boxsets:'All'};
 
 function switchTab(tab){
-  ['audiophile','standard','boxsets'].forEach(t=>{
+  ['audiophile','standard','boxsets','classical'].forEach(t=>{
     document.getElementById(`tab-${t}`).style.display=t===tab?'':'none';
     document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active',t===tab);
   });
@@ -349,16 +374,60 @@ function toggleHideGot(tab){
   rerender(tab);
 }
 
+function rerender(tab){
+  if(tab==='audiophile')renderAudiophile();
+  else if(tab==='standard')renderStandard();
+  else if(tab==='classical')renderClassical();
+  else renderBoxsets();
+}
+
+function toggleGot(id,e){
+  e.stopPropagation();
+  if(gotState[id])delete gotState[id];else gotState[id]=true;
+  saveState();
+  renderAudiophile();renderStandard();renderBoxsets();renderClassical();
+}
+
+function renderClassical(){
+  const q=(document.getElementById('search-classical').value||'').toLowerCase();
+  const rows=CLASSICAL.filter(e=>{
+    if(hideGot.classical&&gotState[e.id])return false;
+    if(!q)return true;
+    return[e.artist,e.album,e.label,e.cat,e.spotIt,e.detail].some(v=>(v||'').toLowerCase().includes(q));
+  });
+  document.getElementById('count-classical').textContent=CLASSICAL.filter(e=>!gotState[e.id]).length+' rem';
+  document.getElementById('badge-classical').textContent=`${rows.length} shown`;
+  const sorted=[...rows].sort((a,b)=>(a.sortKey||'').localeCompare(b.sortKey||''));
+  const tbody=document.getElementById('tbody-classical');
+  if(!sorted.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty">No matches.</div></td></tr>`;return;}
+  tbody.innerHTML=sorted.map(e=>{
+    const got=!!gotState[e.id],open=openRows.has(e.id);
+    return`
+    <tr class="main-row ${got?'got':''}" id="row-${e.id}" onclick="toggleRow('${e.id}')">
+      <td class="cell-expand"><span class="chevron ${open?'open':''}" id="chev-${e.id}">&#9658;</span></td>
+      <td class="cell-artist">${esc(e.artist)}</td>
+      <td class="cell-album">${esc(e.album)}</td>
+      <td class="cell-label">${esc(e.label)}</td>
+      <td class="cell-cat">${esc(e.cat)}</td>
+      <td class="cell-price">${priceStr(e.priceLow,e.priceHigh)}</td>
+      <td class="cell-tip">${esc(e.spotIt)}</td>
+      <td class="cell-got" onclick="event.stopPropagation()"><input type="checkbox" class="got-check" ${got?'checked':''} onchange="toggleGot('${e.id}',event)"></td>
+    </tr>
+    <tr class="detail-row"><td colspan="8"><div class="detail-inner ${open?'open':''}" id="detail-${e.id}">${esc(e.detail)}</div></td></tr>`;
+  }).join('');
+}
+
+let gotState={}, openRows=new Set(), openBoxes=new Set();
+
+function loadState(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');gotState=d.got||{};}catch(e){}}
+function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({got:gotState}));}catch(e){}}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function priceStr(lo,hi){return lo===hi?`$${lo}`:`$${lo}-${hi}`;}
+
 function setGenre(tab,genre){
   activeGenre[tab]=genre;
   document.querySelectorAll(`#genre-btns-${tab} .gbtn`).forEach(b=>b.classList.toggle('active',b.dataset.g===genre));
   rerender(tab);
-}
-
-function rerender(tab){
-  if(tab==='audiophile')renderAudiophile();
-  else if(tab==='standard')renderStandard();
-  else renderBoxsets();
 }
 
 function buildGenreBtns(tab,data){
@@ -367,13 +436,6 @@ function buildGenreBtns(tab,data){
   document.getElementById(`genre-btns-${tab}`).innerHTML=genres.map(g=>
     `<button class="gbtn${activeGenre[tab]===g?' active':''}" data-g="${g}" onclick="setGenre('${tab}','${g}')">${g}</button>`
   ).join('');
-}
-
-function toggleGot(id,e){
-  e.stopPropagation();
-  if(gotState[id])delete gotState[id];else gotState[id]=true;
-  saveState();
-  renderAudiophile();renderStandard();renderBoxsets();
 }
 
 function toggleRow(id){
@@ -521,6 +583,8 @@ loadState();
 renderAudiophile();
 renderStandard();
 renderBoxsets();
+renderClassical();
 </script>
 </body>
 </html>
+
